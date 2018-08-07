@@ -182,7 +182,7 @@ class BinaryOp(Op):
 
         assert len(operands) == 2
         self.operands = operands
-        self.bits = operands[0].bits if not type(operands[0]) in (long, int) else operands[1].bits
+        self.bits = operands[0].bits if type(operands[0]) is not int else operands[1].bits
 
         # TODO: sanity check of operands' sizes for some ops
         # assert self.bits == operands[1].bits
