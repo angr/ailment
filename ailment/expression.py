@@ -61,6 +61,9 @@ class Const(Atom):
             self.value == other.value and \
             self.bits == other.bits
 
+    def __hash__(self):
+        return hash((self.value, self.bits))
+
     @property
     def sign_bit(self):
         return self.value >> (self.bits - 1)
@@ -229,7 +232,7 @@ class Load(Expression):
         return "Load(addr=%s, size=%d, endness=%s)" % (self.addr, self.size, self.endness)
 
     def has_atom(self, atom):
-        if type(self.addr) in (int, long):
+        if type(self.addr) is int:
             return False
         return self.addr.has_atom(atom)
 
