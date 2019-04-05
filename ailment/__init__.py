@@ -1,3 +1,4 @@
+__version__ = (8, 19, 2, 4)
 
 from .block import Block
 from .converter import IRSBConverter
