@@ -4,11 +4,11 @@
 .decl has_type(v: var, t: type)
 .decl eq(l: var, r: var)
 
-.input has_type(delimiter=" = ")
-.input eq(delimiter=" = ")
+.input has_type(delimiter=",")
+.input eq(delimiter=",")
 
 eq(l, r) :- eq(r, l).
 
 has_type(l, t) :- eq(l, r), has_type(r, t).
 
-.output has_type(delimiter=" = ")
+.output has_type(delimiter=",")
