@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict, namedtuple
 
 from ailment.datalog import solve_types
@@ -8,28 +9,8 @@ from angr.analyses.forward_analysis import (ForwardAnalysis,
 from angr.engines.light import SimEngineLightAIL
 from angr.knowledge_plugins import KnowledgeBasePlugin
 
-
-def recordtuple(name, *args, **kwargs):
-    thenamedtuple = namedtuple(name, *args, **kwargs)
-
-    oldhash = thenamedtuple.__hash__
-
-    def improved_hash_function(self):
-        return hash((oldhash(self), name))
-
-    thenamedtuple.__hash__ = improved_hash_function
-
-    oldeq = thenamedtuple.__eq__
-
-    def improved_equal_function(self, other):
-        return oldeq(self, other) and type(self) == type(other)
-
-    thenamedtuple.__eq__ = improved_equal_function
-
-    return type(name, (thenamedtuple, ), {
-        '__hash__': improved_hash_function,
-        '__eq__': improved_equal_function
-    })
+_l = logging.getLogger(__name__)
+_l.setLevel(logging.DEBUG)
 
 class EqualityConstraint:
     def __init__(self, lhs, rhs):
@@ -79,6 +60,33 @@ class WidthType:
     def __repr__(self):
         return '{}({})'.format(WidthType.__name__, self.bits)
 
+class FunctionReturnTypeVar:
+    def __init__(self, func):
+        self.func = func
+
+    def __hash__(self):
+        return hash((FunctionReturnTypeVar.__name__, self.func))
+
+    def __eq__(self, other):
+        return self.func == other.func and type(self) == type(other)
+
+    def __repr__(self):
+        return '{}->return'.format(self.func.name)
+
+class FunctionArgumentType:
+    def __init__(self, func, arg_idx):
+        self.func = func
+        self.arg_idx = arg_idx
+
+    def __hash__(self):
+        return hash((FunctionArgumentType.__name__, self.func))
+
+    def __eq__(self, other):
+        return self.func == other.func and type(self) == type(other)
+
+    def __repr__(self):
+        return '{}->arg{}'.format(self.func, self.arg_idx)
+
 class SimEngineTypeConstraintCollector(SimEngineLightAIL):
     def __init__(self, arch):
         super().__init__()
@@ -117,15 +125,24 @@ class SimEngineTypeConstraintCollector(SimEngineLightAIL):
         self._add_constraint(lhs_tyvar, rhs_tyvar)
 
     def _ail_handle_Call(self, stmt):
+        _l.debug('Detected call at 0x%x', stmt.ins_addr)
+        if stmt.ins_addr == 0x4007c2:
+            breakpoint()
+        if stmt.args is None:
+            return
         if stmt.prototype is not None:
             proto = stmt.prototype.with_arch(self._arch)
             for arg, arg_ty in zip(stmt.args, proto.args):
-                print(arg)
                 arg_tyvar = self._expr(arg)
                 self._add_constraint(arg_tyvar, arg_ty)
             if stmt.ret_expr is not None:
                 ret_tyvar = self._expr(stmt.ret_expr)
                 self._add_constraint(ret_tyvar, proto.returnty)
+        else:
+            for i, v in enumerate(stmt.args):
+                v_tyvar = self._expr(v)
+                func_arg = FunctionArgumentType(stmt.target, i)
+                self._add_constraint(v_tyvar, func_arg)
 
     def _ail_handle_Store(self, stmt):
         if stmt.variable is not None:

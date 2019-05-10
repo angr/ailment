@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 
 
 def solve_types(facts):
-    breakpoint()
     return solve(facts, 'types.dl', ['has_type'])
 
 
