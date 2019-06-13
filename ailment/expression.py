@@ -185,7 +185,7 @@ class Convert(UnaryOp):
                 self.from_bits == other.from_bits and \
                 self.to_bits == other.to_bits and \
                 self.bits == other.bits and \
-                self.is_signed = other.is_signed
+                self.is_signed == other.is_signed
 
     def replace(self, old_expr, new_expr):
         r, replaced_operand = self.operand.replace(old_expr, new_expr)
