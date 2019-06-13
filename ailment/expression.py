@@ -146,6 +146,11 @@ class UnaryOp(Op):
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        return type(self) is type(other) and \
+                self.operand == other.operand and \
+                self.bits == other.bits
+
     def replace(self, old_expr, new_expr):
         r, replaced_operand = self.operand.replace(old_expr, new_expr)
 
@@ -174,6 +179,13 @@ class Convert(UnaryOp):
 
     def __repr__(self):
         return str(self)
+
+    def __eq__(self, other):
+        return type(self) is type(other) and \
+                self.from_bits == other.from_bits and \
+                self.to_bits == other.to_bits and \
+                self.bits == other.bits and \
+                self.is_signed = other.is_signed
 
     def replace(self, old_expr, new_expr):
         r, replaced_operand = self.operand.replace(old_expr, new_expr)
