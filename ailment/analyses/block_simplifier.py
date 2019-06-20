@@ -54,7 +54,7 @@ class BlockSimplifier(Analysis):
     def _simplify_block_once(self, block):
 
         # propagator
-        propagator = self.project.analyses.AILPropagator(block=block, stack_pointer_tracker=self._stack_pointer_tracker)
+        propagator = self.project.analyses.Propagator(block=block, stack_pointer_tracker=self._stack_pointer_tracker)
         replacements = list(propagator._states.values())[0]._final_replacements
         new_block = self._replace_and_build(block, replacements)
         new_block = self._eliminate_dead_assignments(new_block)
