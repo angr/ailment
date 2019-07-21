@@ -171,6 +171,13 @@ class VEXExprConverter(Converter):
                    vex_stmt_idx=manager.vex_stmt_idx,
                    )
 
+    def CCall(expr, manager):
+        if manager.arch.name == "AMD64":
+            return AMD64CCallConverter.convert(expr, manager)
+        else:
+            l.warning("VEXExprConverter: converting %s ccalls is not yet supported.", manager.arch.name)
+            return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
 
 EXPRESSION_MAPPINGS = {
     pyvex.IRExpr.RdTmp: VEXExprConverter.RdTmp,
@@ -182,6 +189,7 @@ EXPRESSION_MAPPINGS = {
     pyvex.const.U64: VEXExprConverter.const_n,
     pyvex.IRExpr.Load: VEXExprConverter.Load,
     pyvex.IRExpr.ITE: VEXExprConverter.ITE,
+    pyvex.IRExpr.CCall: VEXExprConverter.CCall,
 }
 
 
@@ -393,3 +401,92 @@ class IRSBConverter(Converter):
                               )
 
         return Block(addr, irsb.size, statements=statements)
+
+
+class AMD64CCallConverter(Converter):
+
+    @staticmethod
+    def convert(expr, manager):
+        ccall_handler = getattr(AMD64CCallConverter, expr.callee.name, None)
+        if ccall_handler is not None:
+            ccall_handler(expr, manager)
+        else:
+            l.warning("AMD64CCallConverter: Unsupported CCall %s.", expr.callee)
+            return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
+    @staticmethod
+    def get_operand_size(operation):
+        """
+        Return size of operands of an operation
+        """
+
+        if operation[-1] == 'B':
+            return 8
+        elif operation[-1] == 'W':
+            return 16
+        elif operation[-1] == 'L':
+            return 32
+        elif operation[-1] == 'Q':
+            return 64
+
+    @staticmethod
+    def CondZ(manager, operand, *_):
+        return BinaryOp(manager.next_atom(), "CmpEQ", [operand, 0])
+
+    @staticmethod
+    def CondNZ(manager, operand, *_):
+        return BinaryOp(manager.next_atom(), "CmpNE", [operand, 0])
+
+    @staticmethod
+    def CondLE(manager, operand, *_):
+        return BinaryOp(manager.next_atom(), "CmpLE", [operand, 0])
+
+    @staticmethod
+    def CondLT(manager, operand, *_):
+        return BinaryOp(manager.next_atom(), "CmpLT", [operand, 0])
+
+    @staticmethod
+    def CondO(manager, operand, op_is_signed, size):
+        shift_op = BinaryOp(manager.next_atom(), "Shr", [operand, size])
+        convert_op = Convert(manager.next_atom(), size, 1, op_is_signed, shift_op)
+        return AMD64CCallConverter.CondNZ(manager, convert_op)
+
+    @staticmethod
+    def amd64g_calculate_condition(expr, manager):
+        import angr.engines.vex.ccall as vex_ccall
+        cc_cond, cc_op, cc_dep1, cc_dep2, cc_ndep = expr.args
+        if cc_op.tag == "Iex_Const":
+            vex_op = vex_ccall.data_inverted[manager.arch.name]["OpTypes"][cc_op.con.value]
+            if vex_op == "G_CC_OP_COPY" or vex_op == "G_CC_OP_NUMBER":
+                l.warning("AMD64CCallConverter: Unsupported operation %s.", vex_op)
+                return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+            else:
+                ail_op_str = vex_op.split('_')[-1][-1:].title()
+                ail_op_size = AMD64CCallConverter.get_operand_size(vex_op)
+                if ail_op_str == "Inc" or ail_op_str == "Dec":
+                    ail_operand = VEXExprConverter.convert(cc_dep1, manager)
+                    ail_op = UnaryOp(manager.next_atom(), ail_op_str, [ail_operand])
+                    ail_op_signed = True
+                else:
+                    ail_operand1 = VEXExprConverter.convert(cc_dep1, manager)
+                    ail_operand2 = VEXExprConverter.convert(cc_dep2, manager)
+                    ail_op = BinaryOp(manager.next_atom(), ail_op_str, [ail_operand1, ail_operand2])
+                    if ail_op_str.startswith("U"):
+                        ail_op_signed = False
+                    else:
+                        ail_op_signed = True
+        else:
+            l.warning("AMD64CCallConverter: Unsupported operation type %s in amd64g_calculate_condition", type(cc_op))
+            return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
+        if cc_cond.tag == "Iex_Const":
+            vex_cond = vex_ccall.data_inverted[manager.arch.name]["CondTypes"][cc_cond.con.value]
+            cond_handler = getattr(AMD64CCallConverter, vex_cond, None)
+            if cond_handler is not None:
+                return cond_handler(manager, ail_op, ail_op_size, ail_op_signed)
+            else:
+                l.warning("AMD64CCallConverter: Unsupported condition %s", vex_cond)
+                return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+        else:
+            l.warning("AMD64CCallConverter: Unsupported condition type %s in amd64g_calculate_condition", type(cc_cond))
+            return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
