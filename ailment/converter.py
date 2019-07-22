@@ -442,7 +442,7 @@ class AMD64CCallConverter(Converter):
         return BinaryOp(manager.next_atom(), "CmpLE", [operand, 0])
 
     @staticmethod
-    def CondLT(manager, operand, *_):
+    def CondL(manager, operand, *_):
         return BinaryOp(manager.next_atom(), "CmpLT", [operand, 0])
 
     @staticmethod
