@@ -460,6 +460,9 @@ class AMD64CCallConverter(Converter):
             if vex_op == "G_CC_OP_COPY" or vex_op == "G_CC_OP_NUMBER":
                 l.warning("AMD64CCallConverter: Unsupported operation %s.", vex_op)
                 return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+            elif vex_op.startswith("G_CC_OP_LOGIC"):
+                l.warning("AMD64CCallConverter: Operation %s not yet supported", vex_op)
+                return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
             else:
                 ail_op_str = vex_op.split('_')[-1][:-1].title()
                 ail_op_size = AMD64CCallConverter.get_operand_size(vex_op)
