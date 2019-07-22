@@ -461,7 +461,7 @@ class AMD64CCallConverter(Converter):
                 l.warning("AMD64CCallConverter: Unsupported operation %s.", vex_op)
                 return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
             else:
-                ail_op_str = vex_op.split('_')[-1][-1:].title()
+                ail_op_str = vex_op.split('_')[-1][:-1].title()
                 ail_op_size = AMD64CCallConverter.get_operand_size(vex_op)
                 if ail_op_str == "Inc" or ail_op_str == "Dec":
                     ail_operand = VEXExprConverter.convert(cc_dep1, manager)
