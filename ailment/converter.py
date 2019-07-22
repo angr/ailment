@@ -452,6 +452,10 @@ class AMD64CCallConverter(Converter):
         return AMD64CCallConverter.CondNZ(manager, convert_op)
 
     @staticmethod
+    def CondS(manager, operand, *_):
+        return AMD64CCallConverter.CondL(manager, operand)
+
+    @staticmethod
     def amd64g_calculate_condition(expr, manager):
         import angr.engines.vex.ccall as vex_ccall
         cc_cond, cc_op, cc_dep1, cc_dep2, cc_ndep = expr.args
