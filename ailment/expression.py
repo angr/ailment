@@ -111,10 +111,10 @@ class Register(Atom):
 
     def __str__(self):
         if self.variable is None:
-            if hasattr(self, 'reg_name'):
-                return "%s<%d>" % (self.reg_name, self.bits // 8)
-            else:
-                return "reg_%d<%d>" % (self.reg_offset, self.bits // 8)
+        if hasattr(self, 'reg_name'):
+            return "%s<%d>" % (self.reg_name, self.bits // 8)
+        if self.variable is None:
+            return "reg_%d<%d>" % (self.reg_offset, self.bits // 8)
         else:
             return "%s" % str(self.variable.name)
 
