@@ -409,7 +409,7 @@ class AMD64CCallConverter(Converter):
     def convert(expr, manager):
         ccall_handler = getattr(AMD64CCallConverter, expr.callee.name, None)
         if ccall_handler is not None:
-            ccall_handler(expr, manager)
+            return ccall_handler(expr, manager)
         else:
             l.warning("AMD64CCallConverter: Unsupported CCall %s.", expr.callee)
             return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
