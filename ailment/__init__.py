@@ -1,4 +1,4 @@
-__version__ = (8, 19, 4, 5)
+__version__ = (8, 19, 7, 25)
 
 from .block import Block
 from . import statement as Stmt
