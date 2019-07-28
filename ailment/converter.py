@@ -497,3 +497,10 @@ class AMD64CCallConverter(Converter):
         else:
             l.warning("AMD64CCallConverter: Unsupported condition type %s in amd64g_calculate_condition", type(cc_cond))
             return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
+    @staticmethod
+    def amd64g_create_fpucw(expr, manager):
+        fpround = VEXExprConverter.convert(expr.args[0], manager)
+        op1 = BinaryOp(manager.next_atom(), "And", [fpround, 3])
+        op2 = BinaryOp(manager.next_atom(), "Shl", [op1, 10])
+        return BinaryOp(manager.next_atom(), "BOr", [op2, 0x37f])
