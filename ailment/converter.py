@@ -504,3 +504,23 @@ class AMD64CCallConverter(Converter):
         op1 = BinaryOp(manager.next_atom(), "BAnd", [fpround, 3])
         op2 = BinaryOp(manager.next_atom(), "Shl", [op1, 10])
         return BinaryOp(manager.next_atom(), "BOr", [op2, 0x37f])
+
+    @staticmethod
+    def amd64g_check_fldcw(expr, manager):
+        from angr.engines.vex.ccall import EmWarn_X86_x87exns, EmWarn_X86_x87precision, EmNote_NONE
+        fpucw = VEXExprConverter.convert(expr.args[0], manager)
+        rmode = BinaryOp(manager.next_atom(), "Shr", [fpucw, 10])
+        rmode = BinaryOp(manager.next_atom(), "BAnd", [rmode, 3])
+        cond_unmasked_exception = BinaryOp(manager.next_atom(), "BAnd", [fpucw, 0x3f])
+        cond_unmasked_exception = BinaryOp(manager.next_atom(), "CmpNE", [cond_unmasked_exception, 0x3f])
+        res_unmasked_exception = Const(manager.next_atom(), None, EmWarn_X86_x87exns, 8)
+        cond_precision = BinaryOp(manager.next_atom(), "Shr", [fpucw, 8])
+        cond_precision = BinaryOp(manager.next_atom(), "BAnd", [cond_precision, 3])
+        cond_precision = BinaryOp(manager.next_atom(), "CmpNE", [cond_precision, 3])
+        res_precision = Const(manager.next_atom(), None, EmWarn_X86_x87precision, 8)
+        res_default = Const(manager.next_atom(), None, EmNote_NONE, 8)
+        ite1 = ITE(manager.next_atom(), cond_unmasked_exception, res_unmasked_exception, res_default)
+        ite2 = ITE(manager.next_atom(), cond_precision, res_precision, ite1)
+        final_res = BinaryOp(manager.next_atom(), "Shl", [ite2, 32])
+        final_res = BinaryOp(manager.next_atom(), "BOr", [final_res, rmode])
+        return final_res
