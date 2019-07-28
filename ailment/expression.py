@@ -74,7 +74,10 @@ class Const(Atom):
         return str(self)
 
     def __str__(self):
-        return "%#x<%d>" % (self.value, self.bits)
+        if isinstance(self.value, float):
+            return "%f<%d>" % (self.value, self.bits)
+        else:
+            return "%#x<%d>" % (self.value, self.bits)
 
     def __eq__(self, other):
         return type(self) is type(other) and \
