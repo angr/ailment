@@ -501,6 +501,6 @@ class AMD64CCallConverter(Converter):
     @staticmethod
     def amd64g_create_fpucw(expr, manager):
         fpround = VEXExprConverter.convert(expr.args[0], manager)
-        op1 = BinaryOp(manager.next_atom(), "And", [fpround, 3])
+        op1 = BinaryOp(manager.next_atom(), "BAnd", [fpround, 3])
         op2 = BinaryOp(manager.next_atom(), "Shl", [op1, 10])
         return BinaryOp(manager.next_atom(), "BOr", [op2, 0x37f])
