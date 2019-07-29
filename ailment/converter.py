@@ -439,11 +439,11 @@ class AMD64CCallConverter(Converter):
 
     @staticmethod
     def CondLE(manager, operand, *_):
-        return BinaryOp(manager.next_atom(), "CmpLE", [operand, 0])
+        return BinaryOp(manager.next_atom(), "CmpLEs", [operand, 0])
 
     @staticmethod
     def CondL(manager, operand, *_):
-        return BinaryOp(manager.next_atom(), "CmpLT", [operand, 0])
+        return BinaryOp(manager.next_atom(), "CmpLTs", [operand, 0])
 
     @staticmethod
     def CondO(manager, operand, op_is_signed, size):
