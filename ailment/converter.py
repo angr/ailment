@@ -519,8 +519,8 @@ class AMD64CCallConverter(Converter):
         cond_precision = BinaryOp(manager.next_atom(), "CmpNE", [cond_precision, 3])
         res_precision = Const(manager.next_atom(), None, EmWarn_X86_x87precision, 8)
         res_default = Const(manager.next_atom(), None, EmNote_NONE, 8)
-        ite1 = ITE(manager.next_atom(), cond_unmasked_exception, res_unmasked_exception, res_default)
-        ite2 = ITE(manager.next_atom(), cond_precision, res_precision, ite1)
+        ite1 = ITE(manager.next_atom(), cond_unmasked_exception, res_default, res_unmasked_exception)
+        ite2 = ITE(manager.next_atom(), cond_precision, ite1, res_precision)
         final_res = BinaryOp(manager.next_atom(), "Shl", [ite2, 32])
         final_res = BinaryOp(manager.next_atom(), "BOr", [final_res, rmode])
         return final_res
