@@ -524,3 +524,120 @@ class AMD64CCallConverter(Converter):
         final_res = BinaryOp(manager.next_atom(), "Shl", [ite2, 32])
         final_res = BinaryOp(manager.next_atom(), "BOr", [final_res, rmode])
         return final_res
+
+    @staticmethod
+    def amd64g_calculate_rflags_c(expr, manager):
+        import angr.engines.vex.ccall as vex_ccall
+        cc_op, cc_dep1, cc_dep2, cc_ndep = expr.args
+        platform = manager.arch.name
+        ail_operand1 = VEXExprConverter.convert(cc_dep1, manager)
+        ail_operand2 = VEXExprConverter.convert(cc_dep2, manager)
+        ail_ndep = VEXExprConverter.convert(cc_ndep, manager)
+        if cc_op.tag == "Iex_Const":
+            vex_op = vex_ccall.data_inverted[platform]["OpTypes"][cc_op.con.value]
+            if vex_op == "G_CC_OP_COPY":
+                # TODO: actual constraints. Ref: pc_calculate_rdata_c in angr/engines/vex/ccall.py
+                shift = vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C'] & 1
+                return BinaryOp(manager.next_atom(), "Shr", [ail_operand1, shift])
+            elif cc_op in ['G_CC_OP_LOGICQ', 'G_CC_OP_LOGICL', 'G_CC_OP_LOGICW', 'G_CC_OP_LOGICB']:
+                # TODO: actual constraints. Ref: pc_calculate_rdata_c in angr/engines/vex/ccall.py
+                return Const(manager.next_atom(), None, 0, manager.arch.bits)
+            else:
+                operation_size = AMD64CCallConverter.get_operand_size(vex_op)
+                if operation_size != manager.arch.bits:
+                    mask = pow(2, operation_size) - 1
+                    ail_operand1 = BinaryOp(manager.next_atom(), "BAnd", [ail_operand1, mask])
+                    ail_operand2 = BinaryOp(manager.next_atom(), "BAnd", [ail_operand2, mask])
+                    ail_ndep = BinaryOp(manager.next_atom(), "BAnd", [ail_ndep, mask])
+
+                if vex_op in ['G_CC_OP_ADDB', 'G_CC_OP_ADDW', 'G_CC_OP_ADDL', 'G_CC_OP_ADDQ']:
+                    res = BinaryOp(manager.next_atom(), "Add", [ail_operand1, ail_operand2])
+                    res_cmp = BinaryOp(manager.next_atom(), "UCmpLT", [res, ail_operand1])
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    return ITE(manager.next_atom(), res_cmp, const_0, const_1)
+                elif vex_op in ['G_CC_OP_ADCB', 'G_CC_OP_ADCW', 'G_CC_OP_ADCL', 'G_CC_OP_ADCQ']:
+                    old_c = BinaryOp(manager.next_atom(), "BAnd", [ail_ndep, vex_ccall.data[platform]['CondBitMasks']['G_CC_MASK_C']])
+                    op2 = BinaryOp(manager.next_atom(), "Xor", [ail_operand2, old_c])
+                    res = BinaryOp(manager.next_atom(), "Add", [ail_operand1, op2])
+                    res = BinaryOp(manager.next_atom(), "Add", [res, old_c])
+                    cond1 = BinaryOp(manager.next_atom(), "SCmpLE", [res, ail_operand1])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    ite1 = ITE(manager.next_atom(), cond1, const_0, const_1)
+                    cond2 = BinaryOp(manager.next_atom(), "SCmpLT", [res, ail_operand1])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    ite2 = ITE(manager.next_atom(), cond2, const_0, const_1)
+                    cond_oldc = BinaryOp(manager.next_atom(), "CmpNE", [old_c, 0])
+                    return ITE(manager.next_atom(), cond_oldc, ite2, ite1)
+                elif vex_op in ['G_CC_OP_SUBB', 'G_CC_OP_SUBW', 'G_CC_OP_SUBL', 'G_CC_OP_SUBQ']:
+                    cond = BinaryOp(manager.next_atom(), "UCmpLT", [ail_operand1, ail_operand2])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    return ITE(manager.next_atom(), cond, const_0, const_1)
+                elif vex_op in ['G_CC_OP_SBBB', 'G_CC_OP_SBBW', 'G_CC_OP_SBBL', 'G_CC_OP_SBBQ']:
+                    mask = pow(2, vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C']) - 1
+                    old_c = Const(manager.next_atom(), "BAnd", [ail_ndep, mask])
+                    op2 = BinaryOp(manager.next_atom(), "Xor", [ail_operand2, old_c])
+                    cf_c_cond = BinaryOp(manager.next_atom(), "UCmpLE", [ail_operand1, op2])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    cf_c = ITE(manager.next_atom(), cf_c_cond, const_0, const_1)
+                    cf_noc_cond = BinaryOp(manager.next_atom(), "UCmpLT", [ail_operand1, op2])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    cf_noc = ITE(manager.next_atom(), cf_noc_cond, const_0, const_1)
+                    cf_cond = BinaryOp(manager.next_atom(), "CmpEQ", [old_c, 1])
+                    return ITE(manager.next_atom(), cf_cond, cf_noc, cf_c)
+                elif vex_op in ['G_CC_OP_LOGICB', 'G_CC_OP_LOGICW', 'G_CC_OP_LOGICL', 'G_CC_OP_LOGICQ']:
+                    return Const(manager.next_atom(), None, 0, manager.arch.bits)
+                elif vex_op in ['G_CC_OP_INCB', 'G_CC_OP_INCW', 'G_CC_OP_INCL', 'G_CC_OP_INCQ']:
+                    mask = pow(2, vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C']) - 1
+                    return BinaryOp(manager.next_atom(), "BAnd", [ail_ndep, mask])
+                elif vex_op in ['G_CC_OP_DECB', 'G_CC_OP_DECW', 'G_CC_OP_DECL', 'G_CC_OP_DECQ']:
+                    mask = pow(2, vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C']) - 1
+                    return BinaryOp(manager.next_atom(), "BAnd", [ail_ndep, mask])
+                elif vex_op in ['G_CC_OP_SHLB', 'G_CC_OP_SHLW', 'G_CC_OP_SHLL', 'G_CC_OP_SHLQ']:
+                    mask = pow(2, vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C']) - 1
+                    temp = BinaryOp(manager.next_atom(), "Shr", [ail_operand1, operation_size - 1])
+                    return BinaryOp(manager.next_atom(), "BAnd", [temp, mask])
+                elif vex_op in ['G_CC_OP_SHRB', 'G_CC_OP_SHRW', 'G_CC_OP_SHRL', 'G_CC_OP_SHRQ']:
+                    temp = BinaryOp(manager.next_atom(), "BAnd", [ail_operand2, 1])
+                    cond = BinaryOp(manager.next_atom(), "CmpNE", [temp, 0])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    return ITE(cond, const_0, const_1)
+                elif vex_op in ['G_CC_OP_ROLB', 'G_CC_OP_ROLW', 'G_CC_OP_ROLL', 'G_CC_OP_ROLQ']:
+                    return BinaryOp(manager.next_atom(), "BAnd", [ail_operand1, 1])
+                elif vex_op in ['G_CC_OP_RORB', 'G_CC_OP_RORW', 'G_CC_OP_RORL', 'G_CC_OP_RORQ']:
+                    shift = operation_size - 1
+                    temp = BinaryOp(manager.next_atom(), "Shr", [ail_operand1, shift])
+                    return BinaryOp(manager.next_atom(), "BAnd", [temp, 1])
+                elif vex_op in ['G_CC_OP_UMULB', 'G_CC_OP_UMULW', 'G_CC_OP_UMULL', 'G_CC_OP_UMULQ']:
+                    product = BinaryOp(manager.next_atom(), "UMul", [ail_operand1, ail_operand2])
+                    mask = pow(2, operation_size) - 1
+                    lo = BinaryOp(manager.next_atom(), "BAnd", [product, mask])
+                    hi = BinaryOp(manager.next_atom(), "Shr", [lo, operation_size])
+                    hi = BinaryOp(manager.next_atom(), "BAnd", [hi, mask])
+                    cf_cond = BinaryOp(manager.next_atom(), "CmpNE", [hi, 0])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    return ITE(manager.next_atom(), cf_cond, const_0, const_1)
+                elif vex_op in ['G_CC_OP_SMULB', 'G_CC_OP_SMULW', 'G_CC_OP_SMULL', 'G_CC_OP_SMULQ']:
+                    product = BinaryOp(manager.next_atom(), "UMul", [ail_operand1, ail_operand2])
+                    mask = pow(2, operation_size) - 1
+                    lo = BinaryOp(manager.next_atom(), "BAnd", [product, mask])
+                    hi = BinaryOp(manager.next_atom(), "Shr", [lo, operation_size])
+                    hi = BinaryOp(manager.next_atom(), "BAnd", [hi, mask])
+                    op2 = BinaryOp(manager.next_atom(), "Shr", [lo, operation_size - 1])
+                    cf_cond = BinaryOp(manager.next_atom(), "CmpNE", [hi, op2])
+                    const_0 = Const(manager.next_atom(), None, 0, manager.arch.bits)
+                    const_1 = Const(manager.next_atom(), None, 1, manager.arch.bits)
+                    return ITE(manager.next_atom(), cf_cond, const_0, const_1)
+                else:
+                    l.error("AMD64CCallConverter: Unsupported operation %s in amd64g_calculate_rflags_c", vex_op)
+                    return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+        else:
+            l.warning("AMD64CCallConverter: Unsupported operation type %s in amd64g_calculate_rflags_c", type(cc_op))
+            return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
