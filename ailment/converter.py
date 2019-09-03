@@ -540,7 +540,7 @@ class AMD64CCallConverter(Converter):
                 # TODO: actual constraints. Ref: pc_calculate_rdata_c in angr/engines/vex/ccall.py
                 shift = vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_C'] & 1
                 return BinaryOp(manager.next_atom(), "Shr", [ail_operand1, shift])
-            elif cc_op in ['G_CC_OP_LOGICQ', 'G_CC_OP_LOGICL', 'G_CC_OP_LOGICW', 'G_CC_OP_LOGICB']:
+            elif vex_op in ['G_CC_OP_LOGICQ', 'G_CC_OP_LOGICL', 'G_CC_OP_LOGICW', 'G_CC_OP_LOGICB']:
                 # TODO: actual constraints. Ref: pc_calculate_rdata_c in angr/engines/vex/ccall.py
                 return Const(manager.next_atom(), None, 0, manager.arch.bits)
             else:
