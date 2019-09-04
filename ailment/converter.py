@@ -642,3 +642,91 @@ class AMD64CCallConverter(Converter):
         else:
             l.warning("AMD64CCallConverter: Unsupported operation type %s in amd64g_calculate_rflags_c", type(cc_op))
             return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
+        @staticmethod
+        def amd64g_calculate_rflags_all(expr, manager):
+            import angr.engines.vex.ccall as vex_ccall
+            cc_op, cc_dep1, cc_dep2, cc_ndep = expr
+            platform = manager.arch.name
+            ail_operand1 = VEXExprConverter.convert(cc_dep1, manager)
+            ail_operand2 = VEXExprConverter.convert(cc_dep2, manager)
+            ail_ndep = VEXExprConverter.convert(cc_ndep, manager)
+            if cc_op.tag == "Iex_Const":
+                vex_op = vex_ccall.data_inverted[platform]["OpTypes"][cc_op.con.value]
+                if vex_op == "G_CC_OP_COPY":
+                    mask_keys = ["G_CC_MASK_O", "G_CC_MASK_S", "G_CC_MASK_Z",
+                                 "G_CC_MASK_A", "G_CC_MASK_C", "G_CC_MASK_P"]
+                    masks = []
+                    for mask_key in mask_keys:
+                        masks.append(vex_ccall.data[platform]['CondBitMasks'][mask_key])
+
+                    temp_operand = BinaryOp(manager.next_atom(), "BOr", [masks[0], masks[1]])
+                    for mask in masks[2:]:
+                        temp_operand = BinaryOp(manager.next_atom(), "BOr", [temp_operand, mask])
+
+                    return BinaryOp(manager.next_atom(), "BAnd", [ail_operand1, temp_operand])
+                else:
+                    operation_size = AMD64CCallConverter.get_operand_size(vex_op)
+                    if operation_size != manager.arch.bits:
+                        mask = pow(2, operation_size) - 1
+                        ail_operand1 = BinaryOp(manager.next_atom(), "BAnd", [ail_operand1, mask])
+                        ail_operand2 = BinaryOp(manager.next_atom(), "BAnd", [ail_operand2, mask])
+                        ail_ndep = BinaryOp(manager.next_atom(), "BAnd", [ail_ndep, mask])
+
+                    if vex_op in ['G_CC_OP_ADDB', 'G_CC_OP_ADDW', 'G_CC_OP_ADDL', 'G_CC_OP_ADDQ']:
+                        return AMD64CCallConverter.compute_flags_add(ail_operand1, ail_operand2,
+                                                                     ail_ndep, operation_size,
+                                                                     platform, manager)
+                    else:
+                        l.error("AMD64CCallConverter: Unsupported operation %s in amd64g_calculate_rflags_all", vex_op)
+                        return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+            else:
+                l.warning("AMD64CCallConverter: Unsupported operation type %s in amd64g_calculate_rflags_all", type(cc_op))
+                return DirtyExpression(manager.next_atom(), expr, bits=expr.result_size(manager.tyenv))
+
+        def compute_flags_add(op1, op2, op_ndep, nbits, platform, manager):
+            res = BinaryOp(manager.next_atom(), "Add", [op1, op2])
+            # Carry flag
+            res_cmp = BinaryOp(manager.next_atom(), "UCmpLT", [res, op1])
+            const_1 = Const(manager.next_atom(), None, 1, 1)
+            const_0 = Const(manager.next_atom(), None, 0, 1)
+            cf = ITE(manager.next_atom(), res_cmp, const_0, const_1)
+            # Parity flag
+            pf = UnaryOp(manager.next_atom(), "Parity", [res])
+            # Adjust flag
+            af_arg_xor = BinaryOp(manager.next_atom(), "Xor", [res, op1])
+            af_arg_xor = BinaryOp(manager.next_atom(), "Xor", [af_arg_xor, op2])
+            af_bit_offset = vex_ccall.data[platform]['CondBitOffsets']['G_CC_SHIFT_A']
+            af_tmp = BinaryOp(manager.next_atom(), "Shr", [af_arg_xor, af_bit_offset])
+            af_mask = Const(manager.next_atom(), None, 1, 1)
+            af = BinaryOp(manager.next_atom(), "BAnd", [af_tmp, af_mask])
+            # Zero flag
+            const_0 = Const(manager.next_atom(), None, 0, nbits)
+            zf_cond = BinaryOp(manager.next_atom(), "CmpEQ", [res, const_0])
+            const_1 = Const(manager.next_atom(), None, 1, 1)
+            const_0 = Const(manager.next_atom(), None, 0, 1)
+            zf = ITE(manager.next_atom(), zf_cond, const_0, const_1)
+            # Sign flag
+            sf = BinaryOp(manager.next_atom(), "Shr", [res, nbits - 2])
+            # Overflow flag
+            of_arg1_1 = BinaryOp(manager.next_atom(), "Xor", [op1, op2])
+            of_mask = Const(manager.next_atom(), None, pow(2, nbits) - 1, nbits)
+            of_arg1 = BinaryOp(manager.next_atom(), "Xor", [of_arg1_1, of_mask])
+            of_arg2 = BinaryOp(manager.next_atom(), "Xor", [op1, res])
+            tmp = BinaryOp(manager.next_atom(), "BAnd", [of_arg1, of_arg2])
+            of = BinaryOp(manager.next_atom(), "Shr", [tmp, nbits - 2])
+            return AMD64CCallConverter.concat_flags(cf, pf, af, zf, sf, of, platform, manager)
+
+        def concat_flags(cf, pf, af, zf, sf, of, platform, manager):
+            flag_nums = []
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [cf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_C']]))
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [pf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_P']]))
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [pf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_A']]))
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [pf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_Z']]))
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [pf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_S']]))
+            flag_nums.append(BinaryOp(manager.next_atom(), "Shl", [pf, vex_ccall.data[platform]["CondBitOffsets"]['G_CC_SHIFT_O']]))
+            tmp = BinaryOp(manager.next_atom(), "BOr", [flag_nums[0], flag_nums[1]])
+            for i in flag_nums[2:]:
+                tmp = BinaryOp(manager.next_atom(), "BOr", [tmp, flag_nums[2]])
+
+            return tmp
