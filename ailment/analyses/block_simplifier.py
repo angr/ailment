@@ -3,7 +3,7 @@ import logging
 
 from angr import Analysis, register_analysis
 from angr.analyses.reaching_definitions import OP_AFTER
-from angr.analyses.reaching_definitions.external_codeloc import ExternalCodeLocation
+from angr.analyses.reaching_definitions.external_code_location import ExternalCodeLocation
 
 from ..block import Block
 from ..statement import Assignment
