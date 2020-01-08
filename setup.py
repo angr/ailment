@@ -10,7 +10,7 @@ except ImportError:
 
 setup(
     name='ailment',
-    version='8.19.10.30',
+    version='8.20.1.7',
     packages=packages,
     install_requires=[],
     description='The angr intermediate language.',
