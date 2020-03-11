@@ -35,6 +35,8 @@ class BlockSimplifier(Analysis):
         ctr = 0
         max_ctr = 30
 
+        block = self._eliminate_self_assignments(block)
+
         block = self._eliminate_dead_assignments(block)
 
         while True:
@@ -86,6 +88,19 @@ class BlockSimplifier(Analysis):
         new_block.statements = new_statements
         return new_block
 
+    def _eliminate_self_assignments(self, block):
+
+        new_statements = [ ]
+
+        for idx, stmt in enumerate(block.statements):
+            if type(stmt) is Assignment:
+                if stmt.dst.likes(stmt.src):
+                    continue
+            new_statements.append(stmt)
+
+        new_block = block.copy(statements=new_statements)
+        return new_block
+
     def _eliminate_dead_assignments(self, block):
 
         new_statements = [ ]
@@ -121,8 +136,7 @@ class BlockSimplifier(Analysis):
 
             new_statements.append(stmt)
 
-        new_block = block.copy()
-        new_block.statements = new_statements
+        new_block = block.copy(statements=new_statements)
         return new_block
 
 
