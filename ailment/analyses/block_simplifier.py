@@ -1,4 +1,4 @@
-
+# pylint:disable=unused-import
 import logging
 
 from angr import Analysis, register_analysis
@@ -50,7 +50,7 @@ class BlockSimplifier(Analysis):
             block = new_block
             if ctr >= max_ctr:
                 _l.error("Simplification does not reach a fixed point after %d iterations. "
-                         "Block comparison is probably incorrect." % max_ctr)
+                         "Block comparison is probably incorrect.", max_ctr)
                 break
 
         self.result_block = block
@@ -88,11 +88,12 @@ class BlockSimplifier(Analysis):
         new_block.statements = new_statements
         return new_block
 
-    def _eliminate_self_assignments(self, block):
+    @staticmethod
+    def _eliminate_self_assignments(block):
 
         new_statements = [ ]
 
-        for idx, stmt in enumerate(block.statements):
+        for stmt in block.statements:
             if type(stmt) is Assignment:
                 if stmt.dst.likes(stmt.src):
                     continue
@@ -114,8 +115,8 @@ class BlockSimplifier(Analysis):
 
         used_tmp_indices = set(rd.one_result.tmp_uses.keys())
         dead_virgins = rd.one_result._dead_virgin_definitions
-        dead_virgins_stmt_idx = set([ d.codeloc.stmt_idx for d in dead_virgins
-                                      if not isinstance(d.codeloc, ExternalCodeLocation) and not d.dummy ])
+        dead_virgins_stmt_idx = { d.codeloc.stmt_idx for d in dead_virgins
+                                      if not isinstance(d.codeloc, ExternalCodeLocation) and not d.dummy }
 
         for idx, stmt in enumerate(block.statements):
             if type(stmt) is Assignment:
