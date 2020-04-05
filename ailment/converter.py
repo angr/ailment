@@ -457,7 +457,7 @@ class AMD64CCallConverter(Converter):
 
     @staticmethod
     def amd64g_calculate_condition(expr, manager):
-        import angr.engines.vex.ccall as vex_ccall
+        import angr.engines.vex.claripy.ccall as vex_ccall
         cc_cond, cc_op, cc_dep1, cc_dep2, cc_ndep = expr.args
         if cc_op.tag == "Iex_Const":
             vex_op = vex_ccall.data_inverted[manager.arch.name]["OpTypes"][cc_op.con.value]
@@ -508,7 +508,7 @@ class AMD64CCallConverter(Converter):
 
     @staticmethod
     def amd64g_check_fldcw(expr, manager):
-        from angr.engines.vex.ccall import EmWarn_X86_x87exns, EmWarn_X86_x87precision, EmNote_NONE
+        from angr.engines.vex.claripy.ccall import EmWarn_X86_x87exns, EmWarn_X86_x87precision, EmNote_NONE
         fpucw = VEXExprConverter.convert(expr.args[0], manager)
         rmode = BinaryOp(manager.next_atom(), "Shr", [fpucw, 10])
         rmode = BinaryOp(manager.next_atom(), "BAnd", [rmode, 3])
@@ -528,7 +528,7 @@ class AMD64CCallConverter(Converter):
 
     @staticmethod
     def amd64g_calculate_rflags_c(expr, manager):
-        import angr.engines.vex.ccall as vex_ccall
+        import angr.engines.vex.claripy.ccall as vex_ccall
         cc_op, cc_dep1, cc_dep2, cc_ndep = expr.args
         platform = manager.arch.name
         ail_operand1 = VEXExprConverter.convert(cc_dep1, manager)
@@ -645,7 +645,7 @@ class AMD64CCallConverter(Converter):
 
         @staticmethod
         def amd64g_calculate_rflags_all(expr, manager):
-            import angr.engines.vex.ccall as vex_ccall
+            import angr.engines.vex.claripy.ccall as vex_ccall
             cc_op, cc_dep1, cc_dep2, cc_ndep = expr
             platform = manager.arch.name
             ail_operand1 = VEXExprConverter.convert(cc_dep1, manager)
