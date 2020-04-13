@@ -11,6 +11,7 @@ except ImportError:
 setup(
     name='ailment',
     version='8.20.1.7',
+    python_requires='>=3.6',
     packages=packages,
     install_requires=[],
     description='The angr intermediate language.',
