@@ -10,7 +10,7 @@ except ImportError:
 
 setup(
     name='ailment',
-    version='8.20.1.7',
+    version='8.20.5.27',
     python_requires='>=3.6',
     packages=packages,
     install_requires=[],
