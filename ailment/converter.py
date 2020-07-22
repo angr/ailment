@@ -1,7 +1,8 @@
-
+from typing import Optional
 import logging
 
 import pyvex
+from angr.utils.constants import DEFAULT_STATEMENT
 from angr.engines.vex.claripy.irop import vexop_to_simop
 
 from .block import Block
@@ -55,11 +56,19 @@ class VEXExprConverter(Converter):
     def register(offset, bits, manager):
         reg_size = bits // manager.arch.byte_width
         reg_name = manager.arch.translate_register_name(offset, reg_size)
-        return Register(manager.next_atom(), None, offset, bits, reg_name=reg_name)
+        return Register(manager.next_atom(), None, offset, bits, reg_name=reg_name,
+                        ins_addr=manager.ins_addr,
+                        vex_block_addr=manager.block_addr,
+                        vex_stmt_idx=manager.vex_stmt_idx,
+                        )
 
     @staticmethod
     def tmp(tmp_idx, bits, manager):
-        return Tmp(manager.next_atom(), None, tmp_idx, bits)
+        return Tmp(manager.next_atom(), None, tmp_idx, bits,
+                   ins_addr=manager.ins_addr,
+                   vex_block_addr=manager.block_addr,
+                   vex_stmt_idx=manager.vex_stmt_idx,
+                   )
 
     @staticmethod
     def RdTmp(expr, manager):
@@ -74,7 +83,10 @@ class VEXExprConverter(Converter):
         return Load(manager.next_atom(),
                     VEXExprConverter.convert(expr.addr, manager),
                     expr.result_size(manager.tyenv) // 8,
-                    expr.end
+                    expr.end,
+                    ins_addr=manager.ins_addr,
+                    vex_block_addr=manager.block_addr,
+                    vex_stmt_idx=manager.vex_stmt_idx,
                     )
 
     @staticmethod
@@ -89,12 +101,18 @@ class VEXExprConverter(Converter):
                                simop._to_size,
                                simop.is_signed,
                                VEXExprConverter.convert(expr.args[0], manager),
+                               ins_addr=manager.ins_addr,
+                               vex_block_addr=manager.block_addr,
+                               vex_stmt_idx=manager.vex_stmt_idx,
                                )
             raise NotImplementedError('Unsupported operation')
 
         return UnaryOp(manager.next_atom(),
                        op_name,
                        VEXExprConverter.convert(expr.args[0], manager),
+                       ins_addr=manager.ins_addr,
+                       vex_block_addr=manager.block_addr,
+                       vex_stmt_idx=manager.vex_stmt_idx,
                        )
 
     @staticmethod
@@ -119,17 +137,28 @@ class VEXExprConverter(Converter):
                         op,
                         operands,
                         signed,
+                        ins_addr=manager.ins_addr,
+                        vex_block_addr=manager.block_addr,
+                        vex_stmt_idx=manager.vex_stmt_idx,
                         )
 
     @staticmethod
     def Const(expr, manager):
         # pyvex.IRExpr.Const
-        return Const(manager.next_atom(), None, expr.con.value, expr.result_size(manager.tyenv))
+        return Const(manager.next_atom(), None, expr.con.value, expr.result_size(manager.tyenv),
+                     ins_addr=manager.ins_addr,
+                     vex_block_addr=manager.block_addr,
+                     vex_stmt_idx=manager.vex_stmt_idx,
+                     )
 
     @staticmethod
     def const_n(expr, manager):
         # pyvex.const.xxx
-        return Const(manager.next_atom(), None, expr.value, expr.size)
+        return Const(manager.next_atom(), None, expr.value, expr.size,
+                     ins_addr=manager.ins_addr,
+                     vex_block_addr=manager.block_addr,
+                     vex_stmt_idx=manager.vex_stmt_idx,
+                     )
 
     @staticmethod
     def ITE(expr, manager):
@@ -137,7 +166,11 @@ class VEXExprConverter(Converter):
         iffalse = VEXExprConverter.convert(expr.iffalse, manager)
         iftrue = VEXExprConverter.convert(expr.iftrue, manager)
 
-        return ITE(manager.next_atom(), cond, iffalse, iftrue)
+        return ITE(manager.next_atom(), cond, iffalse, iftrue,
+                   ins_addr=manager.ins_addr,
+                   vex_block_addr=manager.block_addr,
+                   vex_stmt_idx=manager.vex_stmt_idx,
+                   )
 
 
 EXPRESSION_MAPPINGS = {
@@ -178,13 +211,17 @@ class VEXStmtConverter(Converter):
         var = VEXExprConverter.tmp(stmt.tmp, stmt.data.result_size(manager.tyenv), manager)
         reg = VEXExprConverter.convert(stmt.data, manager)
 
-        return Assignment(idx, var, reg, ins_addr=manager.ins_addr,)
+        return Assignment(idx, var, reg, ins_addr=manager.ins_addr,
+                          vex_block_addr=manager.block_addr,
+                          vex_stmt_idx=manager.vex_stmt_idx)
 
     @staticmethod
     def Put(idx, stmt, manager):
         data = VEXExprConverter.convert(stmt.data, manager)
         reg = VEXExprConverter.register(stmt.offset, data.bits, manager)
-        return Assignment(idx, reg, data, ins_addr=manager.ins_addr,)
+        return Assignment(idx, reg, data, ins_addr=manager.ins_addr,
+                          vex_block_addr=manager.block_addr,
+                          vex_stmt_idx=manager.vex_stmt_idx)
 
     @staticmethod
     def Store(idx, stmt, manager):
@@ -195,6 +232,8 @@ class VEXStmtConverter(Converter):
                      stmt.data.result_size(manager.tyenv) // 8,
                      stmt.endness,
                      ins_addr=manager.ins_addr,
+                     vex_block_addr=manager.block_addr,
+                     vex_stmt_idx=manager.vex_stmt_idx,
                      )
 
     @staticmethod
@@ -210,7 +249,9 @@ class VEXStmtConverter(Converter):
                                VEXExprConverter.convert(stmt.guard, manager),
                                VEXExprConverter.convert(stmt.dst, manager),
                                None,  # it will be filled in right afterwards
-                               ins_addr=manager.ins_addr
+                               ins_addr=manager.ins_addr,
+                               vex_block_addr=manager.block_addr,
+                               vex_stmt_idx=manager.vex_stmt_idx,
                                )
 
     @staticmethod
@@ -237,7 +278,9 @@ class VEXStmtConverter(Converter):
         if convert_bits != load_bits:
             src = Convert(manager.next_atom(), load_bits, convert_bits, signed, src)
 
-        return Assignment(idx, dst, src, ins_addr=manager.ins_addr)
+        return Assignment(idx, dst, src, ins_addr=manager.ins_addr,
+                          vex_block_addr=manager.block_addr,
+                          vex_stmt_idx=manager.vex_stmt_idx)
 
     @staticmethod
     def StoreG(idx, stmt: pyvex.IRStmt.StoreG, manager):
@@ -249,6 +292,8 @@ class VEXStmtConverter(Converter):
                      stmt.endness,
                      guard=VEXExprConverter.convert(stmt.guard, manager),
                      ins_addr=manager.ins_addr,
+                     vex_block_addr=manager.block_addr,
+                     vex_stmt_idx=manager.vex_stmt_idx,
                      )
 
 
@@ -284,7 +329,7 @@ class IRSBConverter(Converter):
 
         conditional_jumps = [ ]
 
-        for stmt in irsb.statements:
+        for vex_stmt_idx, stmt in enumerate(irsb.statements):
             if type(stmt) is pyvex.IRStmt.IMark:
                 if addr is None:
                     addr = stmt.addr + stmt.delta
@@ -294,6 +339,7 @@ class IRSBConverter(Converter):
                 # TODO: How can we use AbiHint?
                 continue
 
+            manager.vex_stmt_idx = vex_stmt_idx
             try:
                 converted = VEXStmtConverter.convert(idx, stmt, manager)
                 statements.append(converted)
@@ -304,6 +350,7 @@ class IRSBConverter(Converter):
 
             idx += 1
 
+        manager.vex_stmt_idx = DEFAULT_STATEMENT
         if irsb.jumpkind == 'Ijk_Call':
             # call
 
@@ -315,7 +362,9 @@ class IRSBConverter(Converter):
             statements.append(Call(manager.next_atom(),
                                    VEXExprConverter.convert(irsb.next, manager),
                                    ret_expr=ret_expr,
-                                   ins_addr=manager.ins_addr
+                                   ins_addr=manager.ins_addr,
+                                   vex_block_addr=manager.block_addr,
+                                   vex_stmt_idx=DEFAULT_STATEMENT,
                                    )
                               )
         elif irsb.jumpkind == 'Ijk_Boring':
@@ -328,7 +377,9 @@ class IRSBConverter(Converter):
                 # jump
                 statements.append(Jump(manager.next_atom(),
                                        VEXExprConverter.convert(irsb.next, manager),
-                                       ins_addr=manager.ins_addr
+                                       ins_addr=manager.ins_addr,
+                                       vex_block_addr=manager.block_addr,
+                                       vex_stmt_idx=DEFAULT_STATEMENT,
                                        )
                                   )
         elif irsb.jumpkind == 'Ijk_Ret':
@@ -337,6 +388,8 @@ class IRSBConverter(Converter):
                                      VEXExprConverter.convert(irsb.next, manager),
                                      [ ],
                                      ins_addr=manager.ins_addr,
+                                     vex_block_addr=manager.block_addr,
+                                     vex_stmt_idx=DEFAULT_STATEMENT,
                                      )
                               )
 
