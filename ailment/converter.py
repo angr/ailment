@@ -1,4 +1,3 @@
-from typing import Optional
 import logging
 
 import pyvex
@@ -28,7 +27,7 @@ class VEXExprConverter(Converter):
         return vexop_to_simop(vex_op)._generic_name
 
     @staticmethod
-    def convert(expr, manager):
+    def convert(expr, manager):  # pylint:disable=arguments-differ
         """
 
         :param expr:
@@ -189,7 +188,7 @@ EXPRESSION_MAPPINGS = {
 class VEXStmtConverter(Converter):
 
     @staticmethod
-    def convert(idx, stmt, manager):
+    def convert(idx, stmt, manager):  # pylint:disable=arguments-differ
         """
 
         :param idx:
@@ -310,7 +309,7 @@ STATEMENT_MAPPINGS = {
 class IRSBConverter(Converter):
 
     @staticmethod
-    def convert(irsb, manager):
+    def convert(irsb, manager):  # pylint:disable=arguments-differ
         """
 
         :param irsb:
@@ -335,7 +334,7 @@ class IRSBConverter(Converter):
                     addr = stmt.addr + stmt.delta
                 manager.ins_addr = stmt.addr + stmt.delta
                 continue
-            elif type(stmt) is pyvex.IRStmt.AbiHint:
+            if type(stmt) is pyvex.IRStmt.AbiHint:
                 # TODO: How can we use AbiHint?
                 continue
 
