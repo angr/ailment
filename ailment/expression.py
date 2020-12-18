@@ -10,7 +10,7 @@ class Expression(TaggedObject):
     __slots__ = ('depth', )
 
     def __init__(self, idx, depth, **kwargs):
-        super(Expression, self).__init__(idx, **kwargs)
+        super().__init__(idx, **kwargs)
         self.depth = depth
 
     def __repr__(self):
@@ -22,7 +22,7 @@ class Expression(TaggedObject):
         else:
             return self.likes(atom)
 
-    def likes(self, atom):
+    def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
         return False
 
     def replace(self, old_expr, new_expr):
@@ -48,7 +48,7 @@ class Atom(Expression):
     __slots__ = ('variable', 'variable_offset', )
 
     def __init__(self, idx, variable, variable_offset=0, **kwargs):
-        super(Atom, self).__init__(idx, 0, **kwargs)
+        super().__init__(idx, 0, **kwargs)
         self.variable = variable
         self.variable_offset = variable_offset
 
@@ -61,7 +61,7 @@ class Const(Atom):
     __slots__ = ('value', 'bits', )
 
     def __init__(self, idx, variable, value, bits, **kwargs):
-        super(Const, self).__init__(idx, variable, **kwargs)
+        super().__init__(idx, variable, **kwargs)
 
         self.value = value
         self.bits = bits
@@ -96,7 +96,7 @@ class Tmp(Atom):
     __slots__ = ('tmp_idx', 'bits', )
 
     def __init__(self, idx, variable, tmp_idx, bits, **kwargs):
-        super(Tmp, self).__init__(idx, variable, **kwargs)
+        super().__init__(idx, variable, **kwargs)
 
         self.tmp_idx = tmp_idx
         self.bits = bits
@@ -127,7 +127,7 @@ class Register(Atom):
     __slots__ = ('reg_offset', 'bits', )
 
     def __init__(self, idx, variable, reg_offset, bits, **kwargs):
-        super(Register, self).__init__(idx, variable, **kwargs)
+        super().__init__(idx, variable, **kwargs)
 
         self.reg_offset = reg_offset
         self.bits = bits
@@ -166,7 +166,7 @@ class Op(Expression):
     __slots__ = ('op', )
 
     def __init__(self, idx, depth, op, **kwargs):
-        super(Op, self).__init__(idx, depth, **kwargs)
+        super().__init__(idx, depth, **kwargs)
         self.op = op
 
     @property
@@ -179,7 +179,7 @@ class UnaryOp(Op):
     __slots__ = ('operand', 'bits', 'variable', 'variable_offset', )
 
     def __init__(self, idx, op, operand, variable=None, variable_offset=None, **kwargs):
-        super(UnaryOp, self).__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
+        super().__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
 
         self.operand = operand
         self.bits = operand.bits
@@ -225,7 +225,7 @@ class Convert(UnaryOp):
     __slots__ = ('from_bits', 'to_bits', 'is_signed', )
 
     def __init__(self, idx, from_bits, to_bits, is_signed, operand, **kwargs):
-        super(Convert, self).__init__(idx, 'Convert', operand, **kwargs)
+        super().__init__(idx, 'Convert', operand, **kwargs)
 
         self.from_bits = from_bits
         self.to_bits = to_bits
@@ -299,7 +299,7 @@ class BinaryOp(Op):
             operands[0].depth if isinstance(operands[0], Expression) else 0,
             operands[1].depth if isinstance(operands[1], Expression) else 0,
         ) + 1
-        super(BinaryOp, self).__init__(idx, depth, op, **kwargs)
+        super().__init__(idx, depth, op, **kwargs)
 
         assert len(operands) == 2
         self.operands = operands
@@ -377,7 +377,7 @@ class Load(Expression):
 
     def __init__(self, idx, addr, size, endness, variable=None, variable_offset=None, guard=None, alt=None, **kwargs):
         depth = max(addr.depth, size.depth if isinstance(size, Expression) else 0) + 1
-        super(Load, self).__init__(idx, depth, **kwargs)
+        super().__init__(idx, depth, **kwargs)
 
         self.addr = addr
         self.size = size
@@ -433,7 +433,7 @@ class ITE(Expression):
                     iffalse.depth if isinstance(iffalse, Expression) else 0,
                     iftrue.depth if isinstance(iftrue, Expression) else 0
                     ) + 1
-        super(ITE, self).__init__(idx, depth, **kwargs)
+        super().__init__(idx, depth, **kwargs)
 
         self.cond = cond
         self.iffalse = iffalse
@@ -475,7 +475,7 @@ class DirtyExpression(Expression):
     __slots__ = ('dirty_expr', )
 
     def __init__(self, idx, dirty_expr, **kwargs):
-        super(DirtyExpression, self).__init__(idx, 1, **kwargs)
+        super().__init__(idx, 1, **kwargs)
         self.dirty_expr = dirty_expr
 
     def replace(self, old_expr, new_expr):
