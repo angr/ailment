@@ -81,7 +81,9 @@ class Const(Atom):
             self.value == other.value and \
             self.bits == other.bits
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash((self.value, self.bits))
 
     @property
@@ -114,7 +116,9 @@ class Tmp(Atom):
             self.tmp_idx == other.tmp_idx and \
             self.bits == other.bits
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash(('tmp', self.tmp_idx, self.bits))
 
 
@@ -151,7 +155,9 @@ class Register(Atom):
     def __eq__(self, other):
         return self.likes(other) and self.idx == other.idx
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash(('reg', self.reg_offset, self.bits, self.idx))
 
 
@@ -192,7 +198,9 @@ class UnaryOp(Op):
                self.operand == other.operand and \
                self.bits == other.bits
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash((self.op, self.operand, self.bits))
 
     def replace(self, old_expr, new_expr):
@@ -239,7 +247,9 @@ class Convert(UnaryOp):
                self.bits == other.bits and \
                self.is_signed == other.is_signed
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash((self.operand, self.from_bits, self.to_bits, self.bits, self.is_signed))
 
     def replace(self, old_expr, new_expr):
@@ -315,7 +325,9 @@ class BinaryOp(Op):
                self.bits == other.bits and \
                self.signed == other.signed
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash((self.op, tuple(self.operands), self.bits, self.signed))
 
     def has_atom(self, atom, identity=True):
@@ -406,7 +418,9 @@ class Load(Expression):
                self.guard == other.guard and \
                self.alt == other.alt
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash(('Load', self.addr, self.size, self.endness))
 
 
@@ -431,6 +445,9 @@ class ITE(Expression):
 
     def __str__(self):
         return "((%s) ? (%s) : (%s))" % (self.cond, self.iftrue, self.iffalse)
+
+    def _hash_core(self):
+        return hash((ITE, self.cond, self.iffalse, self.iftrue, self.bits))
 
     def has_atom(self, atom, identity=True):
         return self.cond.has_atom(atom, identity=identity) or \
@@ -463,6 +480,14 @@ class DirtyExpression(Expression):
 
     def replace(self, old_expr, new_expr):
         return False, self
+
+    def __eq__(self, other):
+        return type(other) is DirtyExpression and other.dirty_expr == self.dirty_expr
+
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
+        return hash((DirtyExpression, self.dirty_expr))
 
     def __repr__(self):
         return "DirtyExpression (%s)" % type(self.dirty_expr)
@@ -508,7 +533,9 @@ class BasePointerOffset(Expression):
                self.base == other.base and \
                self.offset == other.offset
 
-    def __hash__(self):
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
         return hash((self.bits, self.base, self.offset))
 
     def replace(self, old_expr, new_expr):
