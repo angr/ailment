@@ -415,7 +415,10 @@ class ITE(Expression):
     __slots__ = ('cond', 'iffalse', 'iftrue', 'bits', )
 
     def __init__(self, idx, cond, iffalse, iftrue, **kwargs):
-        depth = max(cond.depth, iffalse.depth, iftrue.depth) + 1
+        depth = max(cond.depth if isinstance(cond, Expression) else 0,
+                    iffalse.depth if isinstance(iffalse, Expression) else 0,
+                    iftrue.depth if isinstance(iftrue, Expression) else 0
+                    ) + 1
         super(ITE, self).__init__(idx, depth, **kwargs)
 
         self.cond = cond
