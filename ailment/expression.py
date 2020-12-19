@@ -295,12 +295,6 @@ class BinaryOp(Op):
         'CmpLEs': '<=s',
         'CmpGTs': '>s',
         'CmpGEs': '>=s',
-        'BOr': '|',
-        'BAnd': '&',
-        'LOr': '||',
-        'LAnd': '&&',
-        'Shl': '<<',
-        'Shr': '>>',
     }
 
     def __init__(self, idx, op, operands, signed, variable=None, variable_offset=None, **kwargs):
