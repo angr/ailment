@@ -55,7 +55,7 @@ class Atom(Expression):
     def __repr__(self):
         return "Atom (%d)" % self.idx
 
-    def copy(self):
+    def copy(self):  # pylint:disable=no-self-use
         return NotImplementedError()
 
 
