@@ -1,5 +1,11 @@
+from typing import Optional
 
 from .tagged_object import TaggedObject
+
+try:
+    import claripy
+except ImportError:
+    claripy = None
 
 
 class Expression(TaggedObject):
@@ -41,6 +47,25 @@ class Expression(TaggedObject):
 
     def __sub__(self, other):
         return BinaryOp(None, 'Sub', [ self, other ], False)
+
+    @staticmethod
+    def first_bits(*exprs) -> Optional[int]:
+        """
+        Return the first available bit-width in a list of expressions.
+
+        :param exprs:   All expressions to attempt to get bit-width for.
+        :return:        The first available bit-width, or None if bit-width is not available for any expressions.
+        """
+
+        for arg in exprs:
+            if isinstance(arg, Atom):
+                return arg.bits
+            elif claripy is not None and isinstance(arg, claripy.ast.Base):
+                return arg.size()
+            elif hasattr(arg, 'bits'):
+                # really hackish
+                return arg.bits
+        return None
 
 
 class Atom(Expression):
@@ -194,7 +219,7 @@ class UnaryOp(Op):
         super().__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
 
         self.operand = operand
-        self.bits = operand.bits
+        self.bits = self.first_bits(operand)
         self.variable = variable
         self.variable_offset = variable_offset
 
@@ -328,7 +353,7 @@ class BinaryOp(Op):
 
         assert len(operands) == 2
         self.operands = operands
-        self.bits = operands[0].bits if type(operands[0]) is not int else operands[1].bits
+        self.bits = self.first_bits(*operands)
         self.signed = signed
         self.variable = variable
         self.variable_offset = variable_offset
