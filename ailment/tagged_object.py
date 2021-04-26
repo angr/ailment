@@ -24,6 +24,11 @@ class TaggedObject:
         except KeyError:
             return super(TaggedObject, self).__getattribute__(item)
 
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls)
+        self.tags = { }
+        return self
+
     def __hash__(self):
         if self._hash is None:
             self._hash = self._hash_core()
