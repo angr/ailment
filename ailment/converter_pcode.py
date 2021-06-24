@@ -450,7 +450,10 @@ class PCodeIRSBConverter(Converter):
         Convert a p-code call operation
         """
         ret_reg_offset = self._manager.arch.ret_offset
-        ret_expr = Register(None, None, ret_reg_offset, self._manager.arch.bits) # ???
+        if ret_reg_offset is not None:
+            ret_expr = Register(None, None, ret_reg_offset, self._manager.arch.bits) # ???
+        else:
+            ret_expr = None
         dest = Const(self._manager.next_atom(),
                     None, self._irsb.next, self._manager.arch.bits)
         stmt = Call(self._manager.next_atom(),
