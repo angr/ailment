@@ -7,7 +7,7 @@ from claripy.ast.bv import BV
 
 from .block import Block
 from .statement import Statement, Assignment, Store, Jump, ConditionalJump, Return, Call
-from .expression import Expression, DirtyExpression, Const, Register, Tmp, UnaryOp, BinaryOp, Load
+from .expression import Expression, DirtyExpression, Const, Register, Tmp, UnaryOp, BinaryOp, Load, Convert
 # FIXME: Convert, ITE
 from .manager import Manager
 from .converter_common import Converter
@@ -112,8 +112,7 @@ class PCodeIRSBConverter(Converter):
 
         self._special_op_handlers = {
             OpCode.COPY:       self._convert_copy,
-            OpCode.INT_ZEXT:   self._convert_copy,
-
+            OpCode.INT_ZEXT:   self._convert_zext,
             OpCode.LOAD:       self._convert_load,
             OpCode.STORE:      self._convert_store,
             OpCode.BRANCH:     self._convert_branch,
@@ -200,6 +199,18 @@ class PCodeIRSBConverter(Converter):
         else:
             out = BinaryOp(self._manager.next_atom(), op, [in1, in2], signed)
 
+        # Zero-extend 1-bit results
+        zextend_ops = [
+            OpCode.INT_EQUAL,
+            OpCode.INT_NOTEQUAL,
+            OpCode.INT_SLESS,
+            OpCode.INT_SLESSEQUAL,
+            OpCode.INT_LESS,
+            OpCode.INT_LESSEQUAL,
+            ]
+        if opcode in zextend_ops:
+            out = Convert(self._manager.next_atom(), 1, self._current_op.output.size*8, False, out)
+
         stmt = self._set_value(self._current_op.output, out)
         self._statements.append(stmt)
 
@@ -269,7 +280,7 @@ class PCodeIRSBConverter(Converter):
         else:
             raise NotImplementedError()
 
-    def _set_value(self, varnode: Varnode, value: BV) -> Statement:
+    def _set_value(self, varnode: Varnode, value: Expression) -> Statement:
         """
         Create the appropriate assignment statement to store to a varnode
 
@@ -315,6 +326,19 @@ class PCodeIRSBConverter(Converter):
         """
         out = self._current_op.output
         inp = self._get_value(self._current_op.inputs[0])
+        stmt = self._set_value(out, inp)
+        self._statements.append(stmt)
+
+    def _convert_zext(self) -> None:
+        """
+        Convert zext operation
+        """
+        out = self._current_op.output
+        inp = Convert(self._manager.next_atom(),
+                      self._current_op.inputs[0].size*8,
+                      out.size*8,
+                      False,
+                      self._get_value(self._current_op.inputs[0]))
         stmt = self._set_value(out, inp)
         self._statements.append(stmt)
 
