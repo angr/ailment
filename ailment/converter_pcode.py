@@ -3,7 +3,6 @@ import logging
 from angr.utils.constants import DEFAULT_STATEMENT
 from angr.engines.pcode.lifter import IRSB
 from pypcode import OpCode, Varnode
-from claripy.ast.bv import BV
 
 from .block import Block
 from .statement import Statement, Assignment, Store, Jump, ConditionalJump, Return, Call
@@ -245,7 +244,7 @@ class PCodeIRSBConverter(Converter):
             self._unique_tracker[offset] = self._unique_counter
             self._unique_counter += 1
         else:
-            assert(offset in self._unique_tracker)
+            assert offset in self._unique_tracker
         return self._unique_tracker[offset]
 
     def _convert_varnode(self, varnode: Varnode, is_write: bool) -> Expression:
@@ -269,7 +268,7 @@ class PCodeIRSBConverter(Converter):
             offset = self._remap_temp(varnode.offset, is_write)
             return Tmp(self._manager.next_atom(), None, offset, size)
         elif space_name in ["ram", "mem"]:
-            assert(not is_write)
+            assert not is_write
             addr = Const(self._manager.next_atom(),
                 None, varnode.offset, self._manager.arch.bits)
             # Note: Load takes bytes, not bits, for size
