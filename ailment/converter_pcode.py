@@ -176,7 +176,8 @@ class PCodeIRSBConverter(Converter):
             out = DirtyExpression(self._manager.next_atom(), opcode.name,
                                   bits=self._current_op.output.size*8)
         else:
-            out = UnaryOp(self._manager.next_atom(), op, in1)
+            out = UnaryOp(self._manager.next_atom(), op, in1,
+                          ins_addr=self._manager.ins_addr)
 
         stmt = self._set_value(self._current_op.output, out)
         self._statements.append(stmt)
@@ -196,7 +197,8 @@ class PCodeIRSBConverter(Converter):
             out = DirtyExpression(self._manager.next_atom(), opcode.name,
                                   bits=self._current_op.output.size*8)
         else:
-            out = BinaryOp(self._manager.next_atom(), op, [in1, in2], signed)
+            out = BinaryOp(self._manager.next_atom(), op, [in1, in2], signed,
+                           ins_addr=self._manager.ins_addr)
 
         # Zero-extend 1-bit results
         zextend_ops = [
@@ -351,7 +353,8 @@ class PCodeIRSBConverter(Converter):
         cval = Const(self._manager.next_atom(),
                 None, 0, self._current_op.inputs[0].size*8)
 
-        expr = BinaryOp(self._manager.next_atom(), 'CmpEQ', [inp, cval], signed=False)
+        expr = BinaryOp(self._manager.next_atom(), 'CmpEQ', [inp, cval], signed=False,
+                        ins_addr=self._manager.ins_addr)
 
         stmt = self._set_value(out, expr)
         self._statements.append(stmt)
