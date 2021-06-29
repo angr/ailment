@@ -368,7 +368,7 @@ class PCodeIRSBConverter(Converter):
         off = self._get_value(self._current_op.inputs[1])
         out = self._current_op.output
         res = Load(self._manager.next_atom(),
-                   off, self._current_op.inputs[1].size, # FIMXE: Check if this is right size
+                   off, self._current_op.output.size,
                    self._manager.arch.memory_endness,
                    ins_addr=self._manager.ins_addr)
         stmt = self._set_value(out, res)
@@ -385,7 +385,7 @@ class PCodeIRSBConverter(Converter):
         l.debug("Storing %s at offset %s", data, off)
         #self.state.memory.store(off, data, endness=self.project.arch.memory_endness)
         stmt = Store(self._statement_idx,
-                     off, data, self._current_op.inputs[1].size, # FIMXE: Check if this is right size
+                     off, data, self._current_op.inputs[2].size,
                      self._manager.arch.memory_endness,
                      ins_addr=self._manager.ins_addr)
         self._statements.append(stmt)
