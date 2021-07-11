@@ -40,7 +40,9 @@ def _dump_tuple(t: Tuple) -> bytes:
             if type_ in _DUMP_BY_TYPE:
                 cnt += _DUMP_BY_TYPE[type_](item)
             else:
-                cnt += struct.pack("<Q", hash(item))  # for TaggedObjects, hash(item) is stable
+                # for TaggedObjects, hash(item) is stable
+                # other types of items may show up, such as pyvex.expr.CCall and Dirty. they will be removed some day.
+                cnt += struct.pack("<Q", hash(item) & 0xffff_ffff_ffff_ffff)
         cnt += b"\xf0"
     return cnt
 
