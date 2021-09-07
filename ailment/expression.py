@@ -626,7 +626,7 @@ class DirtyExpression(Expression):
     def replace(self, old_expr, new_expr):
         return False, self
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is DirtyExpression and other.dirty_expr == self.dirty_expr
 
     __hash__ = TaggedObject.__hash__
