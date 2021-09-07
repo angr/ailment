@@ -585,6 +585,8 @@ class ITE(Expression):
             self.iftrue == atom.iftrue and \
             self.bits == atom.bits
 
+    __hash__ = TaggedObject.__hash__
+
     def _hash_core(self):
         return stable_hash((ITE, self.cond, self.iffalse, self.iftrue, self.bits))
 
