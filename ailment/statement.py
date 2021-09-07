@@ -279,7 +279,7 @@ class Call(Expression, Statement):
         self.args = args
         self.ret_expr = ret_expr
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is Call and \
                self.idx == other.idx and \
                self.target == other.target and \

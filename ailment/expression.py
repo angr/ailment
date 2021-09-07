@@ -27,8 +27,11 @@ class Expression(TaggedObject):
         else:
             return self.likes(atom)
 
+    def __eq__(self, other):
+        return self.likes(other) and self.idx == other.idx
+
     def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
-        return self == atom
+        raise NotImplementedError()
 
     def replace(self, old_expr, new_expr):
         if self is old_expr:
@@ -87,10 +90,10 @@ class Const(Atom):
         except TypeError:
             return "%f<%d>" % (self.value, self.bits)
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(self) is type(other) and \
-            self.value == other.value and \
-            self.bits == other.bits
+               self.value == other.value and \
+               self.bits == other.bits
 
     __hash__ = TaggedObject.__hash__
 
@@ -125,7 +128,7 @@ class Tmp(Atom):
     def __str__(self):
         return "t%d" % self.tmp_idx
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(self) is type(other) and \
             self.tmp_idx == other.tmp_idx and \
             self.bits == other.bits
@@ -169,9 +172,6 @@ class Register(Atom):
         else:
             return "%s" % str(self.variable.name)
 
-    def __eq__(self, other):
-        return self.likes(other) and self.idx == other.idx
-
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -212,7 +212,7 @@ class UnaryOp(Op):
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is UnaryOp and \
                self.op == other.op and \
                self.bits == other.bits and \
@@ -268,7 +268,7 @@ class Convert(UnaryOp):
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is Convert and \
                self.from_bits == other.from_bits and \
                self.to_bits == other.to_bits and \
@@ -319,7 +319,7 @@ class Reinterpret(UnaryOp):
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is Reinterpret and \
                self.from_bits == other.from_bits and \
                self.from_type == other.from_type and \
@@ -429,7 +429,7 @@ class BinaryOp(Op):
     def __repr__(self):
         return "%s(%s, %s)" % (self.verbose_op, self.operands[0], self.operands[1])
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is BinaryOp and \
                self.op == other.op and \
                self.bits == other.bits and \
@@ -536,7 +536,7 @@ class Load(Expression):
         else:
             return False, self
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is Load and \
                self.addr == other.addr and \
                self.size == other.size and \
@@ -577,6 +577,13 @@ class ITE(Expression):
 
     def __str__(self):
         return "((%s) ? (%s) : (%s))" % (self.cond, self.iftrue, self.iffalse)
+
+    def likes(self, atom):
+        return type(atom) is ITE and \
+            self.cond == atom.cond and \
+            self.iffalse == atom.iffalse and \
+            self.iftrue == atom.iftrue and \
+            self.bits == atom.bits
 
     def _hash_core(self):
         return stable_hash((ITE, self.cond, self.iffalse, self.iftrue, self.bits))
@@ -676,7 +683,7 @@ class BasePointerOffset(Expression):
             return "%s%+d" % (self.base, self.offset)
         return "%s+%s" % (self.base, self.offset)
 
-    def __eq__(self, other):
+    def likes(self, other):
         return type(other) is type(self) and \
                self.bits == other.bits and \
                self.base == other.base and \
