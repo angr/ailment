@@ -1,3 +1,4 @@
+# pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type
 try:
     import claripy
 except ImportError:
