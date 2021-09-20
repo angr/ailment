@@ -14,7 +14,6 @@ except:
     pyvex = None
 
 
-@unittest.skipUnless(angr, "angr required")
 class TestIrsb(unittest.TestCase):
     block_bytes = bytes.fromhex("554889E54883EC40897DCC488975C048C745F89508400048C745F0B6064000488B45C04883C008488B00BEA70840004889C7E883FEFFFF")
     block_addr = 0x4006c6
@@ -26,7 +25,10 @@ class TestIrsb(unittest.TestCase):
         irsb = pyvex.IRSB(self.block_bytes, self.block_addr, arch, opt_level=0)
         ablock = ailment.IRSBConverter.convert(irsb, manager)
 
-    @unittest.skipUnless(hasattr(angr.engines, "UberEnginePcode"), "pypcode required")
+    @unittest.skipUnless(
+        angr and hasattr(angr.engines, "UberEnginePcode"),
+        "angr and pypcode required"
+    )
     def test_convert_from_pcode_irsb(self):
         arch = archinfo.arch_from_id('AMD64')
         manager = ailment.Manager(arch=arch)
