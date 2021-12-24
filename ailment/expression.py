@@ -695,6 +695,9 @@ class VEXCCallExpression(Expression):
             if operand is old_expr:
                 new_operands.append(new_expr)
                 replaced = True
+            elif isinstance(operand, (DirtyExpression, VEXCCallExpression)):
+                # do not recursively replace
+                new_operands.append(operand)
             else:
                 operand_replaced, new_operand = operand.replace(old_expr, new_expr)
                 if operand_replaced:
