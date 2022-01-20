@@ -51,7 +51,6 @@ class Assignment(Statement):
 
     def __eq__(self, other):
         return type(other) is Assignment and \
-               self.idx == other.idx and \
                self.dst == other.dst and \
                self.src == other.src
 
@@ -106,7 +105,6 @@ class Store(Statement):
 
     def __eq__(self, other):
         return type(other) is Store and \
-               self.idx == other.idx and \
                self.eq(self.addr, other.addr) and \
                self.eq(self.data, other.data) and \
                self.size == other.size and \
@@ -173,7 +171,6 @@ class Jump(Statement):
 
     def __eq__(self, other):
         return type(other) is Jump and \
-               self.idx == other.idx and \
                self.target == other.target
 
     __hash__ = TaggedObject.__hash__
@@ -216,7 +213,6 @@ class ConditionalJump(Statement):
 
     def __eq__(self, other):
         return type(other) is ConditionalJump and \
-               self.idx == other.idx and \
                self.condition == other.condition and \
                self.true_target == other.true_target and \
                self.false_target == other.false_target
@@ -279,7 +275,6 @@ class Call(Expression, Statement):
 
     def likes(self, other):
         return type(other) is Call and \
-               self.idx == other.idx and \
                self.target == other.target and \
                self.calling_convention == other.calling_convention and \
                self.prototype == other.prototype and \
@@ -390,7 +385,6 @@ class Return(Statement):
 
     def __eq__(self, other):
         return type(other) is Return and \
-                self.idx == other.idx and \
                 self.target == other.target and \
                 self.ret_exprs == other.ret_exprs
 
