@@ -29,7 +29,7 @@ class Expression(TaggedObject):
             return self.likes(atom)
 
     def __eq__(self, other):
-        return self.likes(other) and self.idx == other.idx
+        return self.likes(other)
 
     def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
         raise NotImplementedError()
@@ -131,7 +131,6 @@ class Tmp(Atom):
 
     def likes(self, other):
         return type(self) is type(other) and \
-            self.tmp_idx == other.tmp_idx and \
             self.bits == other.bits
 
     __hash__ = TaggedObject.__hash__
