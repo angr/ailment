@@ -10,7 +10,7 @@ except ImportError:
 
 setup(
     name='ailment',
-    version='9.1.gitrolling',
+    version='9.1.11752',
     python_requires='>=3.6',
     packages=packages,
     install_requires=[],
