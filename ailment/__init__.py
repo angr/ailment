@@ -1,7 +1,7 @@
 __version__ = (9, 1, "gitrolling")
 
 import logging
-from typing import List
+from typing import Set
 
 from .block import Block
 from . import statement as Stmt
@@ -14,12 +14,12 @@ from .manager import Manager
 log = logging.getLogger(__name__)
 
 
-available_converters: List[str] = []
+available_converters: Set[str] = set()
 
 try:
     from .converter_vex import VEXIRSBConverter
     import pyvex
-    available_converters.append("vex")
+    available_converters.add("vex")
 except ImportError as e:
     log.debug("Could not import VEXIRSBConverter")
     log.debug(e)
@@ -27,7 +27,7 @@ except ImportError as e:
 try:
     from .converter_pcode import PCodeIRSBConverter
     from angr.engines import pcode
-    available_converters.append("pcode")
+    available_converters.add("pcode")
 except ImportError as e:
     log.debug("Could not import PCodeIRSBConverter")
     log.debug(e)
