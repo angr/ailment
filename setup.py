@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ailment',
-    version='9.1.gitrolling',
+    version='9.2.0.dev0',
     python_requires='>=3.6',
     packages=find_packages(),
     install_requires=[],
