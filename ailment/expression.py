@@ -629,7 +629,7 @@ class DirtyExpression(Expression):
     __slots__ = ('dirty_expr', 'bits', )
 
     def __init__(self, idx, dirty_expr, bits=None, **kwargs):
-        super().__init__(idx, 1, **kwargs)
+        super().__init__(idx, dirty_expr.depth + 1, **kwargs)
         self.dirty_expr = dirty_expr
         self.bits = bits
 
