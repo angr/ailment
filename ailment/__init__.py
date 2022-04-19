@@ -1,4 +1,4 @@
-__version__ = "9.2.0.dev0"
+__version__ = "9.2.0"
 
 import logging
 from typing import Set
