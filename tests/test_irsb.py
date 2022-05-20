@@ -5,16 +5,17 @@ import ailment
 try:
     import angr
     import archinfo
-except:
+except ImportError:
     angr = None
 
 try:
     import pyvex
-except:
+except ImportError:
     pyvex = None
 
 
 class TestIrsb(unittest.TestCase):
+    # pylint disable=missing-class-docstring
     block_bytes = bytes.fromhex("554889E54883EC40897DCC488975C048C745F89508400048C745F0B6064000488B45C04883C008488B00BEA70840004889C7E883FEFFFF")
     block_addr = 0x4006c6
 
@@ -34,7 +35,7 @@ class TestIrsb(unittest.TestCase):
         manager = ailment.Manager(arch=arch)
         p = angr.load_shellcode(self.block_bytes, arch, self.block_addr, self.block_addr,
                                 engine=angr.engines.UberEnginePcode)
-        irsb = p.factory.block(block_addr).vex
+        irsb = p.factory.block(self.block_addr).vex
         ablock = ailment.IRSBConverter.convert(irsb, manager)
 
 
