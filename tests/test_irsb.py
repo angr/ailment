@@ -15,8 +15,8 @@ except ImportError:
 
 
 class TestIrsb(unittest.TestCase):
-    # pylint disable=missing-class-docstring
-    block_bytes = bytes.fromhex("554889E54883EC40897DCC488975C048C745F89508400048C745F0B6064000488B45C04883C008488B00BEA70840004889C7E883FEFFFF")
+    # pylint: disable=missing-class-docstring
+    block_bytes = bytes.fromhex("554889E54883EC40897DCC488975C048C745F89508400048C745F0B6064000488B45C04883C008488B00BEA70840004889C7E883FEFFFF")  # pylint: disable=line-too-long
     block_addr = 0x4006c6
 
     @unittest.skipUnless(pyvex, "pyvex required")
