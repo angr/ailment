@@ -30,15 +30,15 @@ class TaggedObject:
         """Create a new instance and set `_tags` attribute.
         
         Since TaggedObject override `__getattr__` method and try to access the 
-        `_tags` attribute, infinite recursion could be occur if `_tags` not 
-        ready exists. 
+        `_tags` attribute, infinite recursion could occur if `_tags` not ready 
+        to exists. 
         
         This behavior causes an infinite recursion error when copying 
         `TaggedObject` with `copy.deepcopy`.
 
         Hence, we set `_tags` attribute here to prevent this problem.
         """
-        # dele unused argument
+        # delete unused argument
         del args, kwargs
         self = super().__new__(cls)
         self._tags = None
