@@ -26,6 +26,24 @@ class TaggedObject:
         except KeyError:
             return super(TaggedObject, self).__getattribute__(item)
 
+    def __new__(cls, *args, **kwargs):
+        """Create a new instance and set `_tags` attribute.
+        
+        Since TaggedObject override `__getattr__` method and try to access the 
+        `_tags` attribute, infinite recursion could be occur if `_tags` not 
+        ready exists. 
+        
+        This behavior causes an infinite recursion error when copying 
+        `TaggedObject` with `copy.deepcopy`.
+
+        Hence, we set `_tags` attribute here to prevent this problem.
+        """
+        # dele unused argument
+        del args, kwargs
+        self = super().__new__(cls)
+        self._tags = None
+        return self
+
     def __hash__(self):
         if self._hash is None:
             self._hash = self._hash_core()
