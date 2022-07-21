@@ -25,6 +25,7 @@ class TestIrsb(unittest.TestCase):
         manager = ailment.Manager(arch=arch)
         irsb = pyvex.IRSB(self.block_bytes, self.block_addr, arch, opt_level=0)
         ablock = ailment.IRSBConverter.convert(irsb, manager)
+        assert ablock  # TODO: test if this conversion is valid
 
     @unittest.skipUnless(
         angr and hasattr(angr.engines, "UberEnginePcode"),
@@ -37,6 +38,7 @@ class TestIrsb(unittest.TestCase):
                                 engine=angr.engines.UberEnginePcode)
         irsb = p.factory.block(self.block_addr).vex
         ablock = ailment.IRSBConverter.convert(irsb, manager)
+        assert ablock  # TODO: test if this conversion is valid
 
 
 if __name__ == "__main__":
