@@ -359,6 +359,7 @@ class BinaryOp(Op):
         'Add': '+',
         'Sub': '-',
         'Mul': '*',
+        'Mull': '*l',
         'Div': '/',
         'DivMod': '/m',
         'Xor': '^',
@@ -414,6 +415,8 @@ class BinaryOp(Op):
             self.bits = 1
         elif self.op == "Concat":
             self.bits = get_bits(operands[0]) + get_bits(operands[1])
+        elif self.op == "Mull":
+            self.bits = get_bits(operands[0]) * 2
         else:
             self.bits = get_bits(operands[0]) if type(operands[0]) is not int else get_bits(operands[1])
         self.signed = signed
