@@ -399,7 +399,7 @@ class BinaryOp(Op):
         'Shl': '<<',
         'Shr': '>>',
         'Sar': '>>a',
-        'CmpF': '==f',
+        'CmpF': 'CmpF',
         'CmpEQ': '==',
         'CmpNE': '!=',
         'CmpLT': '<',
