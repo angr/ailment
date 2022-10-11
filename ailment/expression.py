@@ -1,4 +1,4 @@
-# pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type
+# pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
 try:
     import claripy
 except ImportError:
@@ -573,7 +573,6 @@ class TernaryOp(Op):
         assert len(operands) == 3
         self.operands = operands
         self.bits = bits
-        import ipdb; ipdb.set_trace()
 
     def __str__(self):
         return f"{self.verbose_op}({self.operands[0]}, {self.operands[1]}, {self.operands[2]})"
