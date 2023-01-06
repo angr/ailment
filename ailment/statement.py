@@ -546,10 +546,17 @@ class Label(Statement):
     __slots__ = ('name', 'ins_addr', 'block_idx', )
 
     def __init__(self, idx, name: str, ins_addr: int, block_idx: Optional[int] = None, **kwargs):
+        if 'ins_addr' not in kwargs:
+            kwargs['ins_addr'] = ins_addr
+
         super().__init__(idx, **kwargs)
+
         self.name = name
         self.ins_addr = ins_addr
         self.block_idx = block_idx
+
+    def likes(self, other: "Label"):
+        return isinstance(other, Label)
 
     def _hash_core(self):
         return stable_hash((Label, self.name, self.ins_addr, self.block_idx, ))
