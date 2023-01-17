@@ -52,3 +52,22 @@ class IRSBConverter(Converter):
             return VEXIRSBConverter.convert(irsb, manager)
         else:
             raise ValueError("No converter available for %s" % type(irsb))
+
+
+__all__ = [
+    "available_converters",
+    "Block",
+    "Stmt",
+    "Expr",
+    "Assignment",
+    "Expression",
+    "Const",
+    "Tmp",
+    "Register",
+    "UnaryOp",
+    "BinaryOp",
+    "Manager",
+    "IRSBConverter",
+    *["PCodeIRSBConverter" for _ in available_converters if _ == "pcode"],
+    *["VEXIRSBConverter" for _ in available_converters if _ == "vex"],
+]
