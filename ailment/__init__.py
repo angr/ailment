@@ -68,6 +68,6 @@ __all__ = [
     "BinaryOp",
     "Manager",
     "IRSBConverter",
-    *["PCodeIRSBConverter" for _ in available_converters if _ == "pcode"],
-    *["VEXIRSBConverter" for _ in available_converters if _ == "vex"],
+    *(["PCodeIRSBConverter"] if "pcode" in available_converters else []),
+    *(["VEXIRSBConverter"] if "vex" in available_converters else []),
 ]
