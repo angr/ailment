@@ -27,7 +27,6 @@ opcode_to_generic_name = {
     OpCode.INT_SLESSEQUAL: "CmpLEs",
     OpCode.INT_LESS: "CmpLT",
     OpCode.INT_LESSEQUAL: "CmpLE",
-    # ZEXT and SEXT are specially handled in _convert_unary()
     # OpCode.INT_ZEXT          : '',
     # OpCode.INT_SEXT          : '',
     OpCode.INT_ADD: "Add",
@@ -114,6 +113,7 @@ class PCodeIRSBConverter(Converter):
         self._special_op_handlers = {
             OpCode.COPY: self._convert_copy,
             OpCode.INT_ZEXT: self._convert_zext,
+            OpCode.INT_SEXT: self._convert_sext,
             OpCode.LOAD: self._convert_load,
             OpCode.STORE: self._convert_store,
             OpCode.BRANCH: self._convert_branch,
@@ -171,35 +171,13 @@ class PCodeIRSBConverter(Converter):
         """
         opcode = self._current_op.opcode
 
+        op = opcode_to_generic_name.get(opcode, None)
         in1 = self._get_value(self._current_op.inputs[0])
-        if opcode == OpCode.INT_SEXT:
-            # signed extension
-            out = Convert(
-                self._manager.next_atom(),
-                self._current_op.inputs[0].size * 8,
-                self._current_op.output.size * 8,
-                True,
-                in1,
-                ins_addr=self._manager.ins_addr,
-            )
-        elif opcode == OpCode.INT_ZEXT:
-            # zero extension
-            out = Convert(
-                self._manager.next_atom(),
-                self._current_op.inputs[0].size * 8,
-                self._current_op.output.size * 8,
-                False,
-                in1,
-                ins_addr=self._manager.ins_addr,
-            )
+        if op is None:
+            log.warning("p-code: Unsupported opcode of type %s", opcode.name)
+            out = DirtyExpression(self._manager.next_atom(), opcode.name, bits=self._current_op.output.size * 8)
         else:
-            op = opcode_to_generic_name.get(opcode, None)
-
-            if op is None:
-                log.warning("p-code: Unsupported opcode of type %s", opcode.name)
-                out = DirtyExpression(self._manager.next_atom(), opcode.name, bits=self._current_op.output.size * 8)
-            else:
-                out = UnaryOp(self._manager.next_atom(), op, in1, ins_addr=self._manager.ins_addr)
+            out = UnaryOp(self._manager.next_atom(), op, in1, ins_addr=self._manager.ins_addr)
 
         stmt = self._set_value(self._current_op.output, out)
         self._statements.append(stmt)
@@ -356,6 +334,21 @@ class PCodeIRSBConverter(Converter):
     def _convert_zext(self) -> None:
         """
         Convert zext operation
+        """
+        out = self._current_op.output
+        inp = Convert(
+            self._manager.next_atom(),
+            self._current_op.inputs[0].size * 8,
+            out.size * 8,
+            False,
+            self._get_value(self._current_op.inputs[0]),
+        )
+        stmt = self._set_value(out, inp)
+        self._statements.append(stmt)
+
+    def _convert_sext(self) -> None:
+        """
+        Convert the signed extension operation
         """
         out = self._current_op.output
         inp = Convert(
