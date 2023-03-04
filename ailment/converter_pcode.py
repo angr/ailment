@@ -423,7 +423,16 @@ class PCodeIRSBConverter(Converter):
         dest_addr = self._current_op.inputs[0].get_addr()
         if dest_addr.is_constant:
             raise NotImplementedError("p-code relative branch not supported yet")
+
+        # special handling: if the previous statement is a ConditionalJump with a None destination address, then we
+        # back-patch the previous statement
         dest = Const(self._manager.next_atom(), None, dest_addr.offset, self._manager.arch.bits)
+        if self._statements:
+            last_stmt = self._statements[-1]
+            if isinstance(last_stmt, ConditionalJump) and last_stmt.false_target is None:
+                last_stmt.false_target = dest
+                return
+
         stmt = Jump(self._statement_idx, dest, ins_addr=self._manager.ins_addr)
         self._statements.append(stmt)
 
@@ -439,10 +448,7 @@ class PCodeIRSBConverter(Converter):
         cval = Const(self._manager.next_atom(), None, 0, cond.bits)
         condition = BinaryOp(self._manager.next_atom(), "CmpNE", [cond, cval], signed=False)
         dest = Const(self._manager.next_atom(), None, dest_addr, self._manager.arch.bits)
-        fallthru = Const(
-            self._manager.next_atom(), None, self._manager.ins_addr + self._current_ins.length, self._manager.arch.bits
-        )
-        stmt = ConditionalJump(self._statement_idx, condition, dest, fallthru, ins_addr=self._manager.ins_addr)
+        stmt = ConditionalJump(self._statement_idx, condition, dest, None, ins_addr=self._manager.ins_addr)
         self._statements.append(stmt)
 
     def _convert_ret(self) -> None:
