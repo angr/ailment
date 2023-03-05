@@ -128,6 +128,8 @@ class PCodeIRSBConverter(Converter):
             OpCode.SEGMENTOP: self._convert_segment_op,
             OpCode.CPOOLREF: self._convert_cpool_ref,
             OpCode.NEW: self._convert_new,
+            OpCode.FLOAT_INT2FLOAT: self._convert_int2float,
+            OpCode.FLOAT_FLOAT2FLOAT: self._convert_float2float,
         }
 
         manager.tyenv = None
@@ -202,14 +204,14 @@ class PCodeIRSBConverter(Converter):
             out = BinaryOp(self._manager.next_atom(), op, [in1, in2], signed, ins_addr=self._manager.ins_addr)
 
         # Zero-extend 1-bit results
-        zextend_ops = [
+        zextend_ops = {
             OpCode.INT_EQUAL,
             OpCode.INT_NOTEQUAL,
             OpCode.INT_SLESS,
             OpCode.INT_SLESSEQUAL,
             OpCode.INT_LESS,
             OpCode.INT_LESSEQUAL,
-        ]
+        }
         if opcode in zextend_ops:
             out = Convert(self._manager.next_atom(), 1, self._current_op.output.size * 8, False, out)
 
@@ -509,6 +511,40 @@ class PCodeIRSBConverter(Converter):
             vex_block_addr=self._manager.block_addr,
             vex_stmt_idx=DEFAULT_STATEMENT,
         )
+        self._statements.append(stmt)
+
+    def _convert_int2float(self) -> None:
+        """
+        Convert INT2FLOAT operation.
+        """
+        out = self._current_op.output
+        inp = Convert(
+            self._manager.next_atom(),
+            self._current_op.inputs[0].size * 8,
+            out.size * 8,
+            True,
+            self._get_value(self._current_op.inputs[0]),
+            from_type=Convert.TYPE_INT,
+            to_type=Convert.TYPE_FP,
+        )
+        stmt = self._set_value(out, inp)
+        self._statements.append(stmt)
+
+    def _convert_float2float(self) -> None:
+        """
+        Convert FLOAT2FLOAT operation.
+        """
+        out = self._current_op.output
+        inp = Convert(
+            self._manager.next_atom(),
+            self._current_op.inputs[0].size * 8,
+            out.size * 8,
+            True,
+            self._get_value(self._current_op.inputs[0]),
+            from_type=Convert.TYPE_FP,
+            to_type=Convert.TYPE_FP,
+        )
+        stmt = self._set_value(out, inp)
         self._statements.append(stmt)
 
     def _convert_callother(self) -> None:
