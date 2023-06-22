@@ -1228,21 +1228,3 @@ def negate(expr: Expression) -> Expression:
             **expr.tags,
         )
     return UnaryOp(None, "Not", expr, **expr.tags)
-
-
-def swap(expr: Expression) -> Expression:
-    if isinstance(expr, UnaryOp) and expr.op == "Not":
-        # unpack
-        return expr.operand
-    if isinstance(expr, BinaryOp) and expr.op in BinaryOp.COMPARISON_NEGATION:
-        return BinaryOp(
-            expr.idx,
-            BinaryOp.COMPARISON_NEGATION[expr.op],
-            [expr.operands[1], expr.operands[0]],
-            expr.signed,
-            bits=expr.bits,
-            floating_point=expr.floating_point,
-            rounding_mode=expr.rounding_mode,
-            **expr.tags,
-        )
-    return UnaryOp(None, "Not", expr, **expr.tags)
