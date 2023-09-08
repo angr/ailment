@@ -1,4 +1,4 @@
-# pylint:disable=isinstance-second-argument-not-valid-type
+# pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed
 from typing import Optional, TYPE_CHECKING
 
 try:
@@ -92,6 +92,9 @@ class Assignment(Statement):
 
 
 class Store(Statement):
+    """
+    Store statement: *addr = data
+    """
     __slots__ = (
         "addr",
         "size",
@@ -211,6 +214,9 @@ class Store(Statement):
 
 
 class Jump(Statement):
+    """
+    Jump statement: goto target
+    """
     __slots__ = (
         "target",
         "target_idx",
@@ -260,6 +266,9 @@ class Jump(Statement):
 
 
 class ConditionalJump(Statement):
+    """
+    if (cond) {true_target} else {false_target}
+    """
     __slots__ = (
         "condition",
         "true_target",
@@ -506,6 +515,9 @@ class Call(Expression, Statement):
 
 
 class Return(Statement):
+    """
+    Return statement: (return expr_a), (return)
+    """
     __slots__ = ("ret_exprs",)
 
     def __init__(self, idx, ret_exprs, **kwargs):
