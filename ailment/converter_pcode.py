@@ -474,7 +474,7 @@ class PCodeIRSBConverter(Converter):
         """
         Convert a p-code return operation
         """
-        dest = Const(self._manager.next_atom(), None, self._irsb.next, self._manager.arch.bits)
+        Const(self._manager.next_atom(), None, self._irsb.next, self._manager.arch.bits)
         stmt = Return(
             self._statement_idx,
             [],

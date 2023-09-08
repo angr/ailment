@@ -443,7 +443,6 @@ class Call(Expression, Statement):
             r0, replaced_target = self.target.replace(old_expr, new_expr)
         else:
             r0 = False
-            replaced_target = self.target
 
         r = r0
 
@@ -505,26 +504,17 @@ class Call(Expression, Statement):
 
 
 class Return(Statement):
-    __slots__ = (
-        "ret_exprs",
-    )
+    __slots__ = ("ret_exprs",)
 
     def __init__(self, idx, ret_exprs, **kwargs):
         super().__init__(idx, **kwargs)
         self.ret_exprs = ret_exprs if isinstance(ret_exprs, list) else list(ret_exprs)
 
     def __eq__(self, other):
-        return (
-            type(other) is Return
-            and self.idx == other.idx
-            and self.ret_exprs == other.ret_exprs
-        )
+        return type(other) is Return and self.idx == other.idx and self.ret_exprs == other.ret_exprs
 
     def likes(self, other):
-        return (
-            type(other) is Return
-            and is_none_or_likeable(self.ret_exprs, other.ret_exprs, is_list=True)
-        )
+        return type(other) is Return and is_none_or_likeable(self.ret_exprs, other.ret_exprs, is_list=True)
 
     __hash__ = TaggedObject.__hash__
 
