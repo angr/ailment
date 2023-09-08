@@ -481,6 +481,7 @@ class Call(Expression, Statement):
         if r:
             return True, Call(
                 self.idx,
+                replaced_target,
                 calling_convention=self.calling_convention,
                 prototype=self.prototype,
                 args=new_args,
@@ -494,6 +495,7 @@ class Call(Expression, Statement):
     def copy(self):
         return Call(
             self.idx,
+            self.target,
             calling_convention=self.calling_convention,
             prototype=self.prototype,
             args=self.args[::] if self.args is not None else None,
