@@ -482,7 +482,6 @@ class Call(Expression, Statement):
         if r:
             return True, Call(
                 self.idx,
-                replaced_target,
                 calling_convention=self.calling_convention,
                 prototype=self.prototype,
                 args=new_args,
@@ -496,7 +495,6 @@ class Call(Expression, Statement):
     def copy(self):
         return Call(
             self.idx,
-            self.target,
             calling_convention=self.calling_convention,
             prototype=self.prototype,
             args=self.args[::] if self.args is not None else None,
@@ -508,38 +506,33 @@ class Call(Expression, Statement):
 
 class Return(Statement):
     __slots__ = (
-        "target",
         "ret_exprs",
     )
 
-    def __init__(self, idx, target, ret_exprs, **kwargs):
+    def __init__(self, idx, ret_exprs, **kwargs):
         super().__init__(idx, **kwargs)
-
-        self.target = target
         self.ret_exprs = ret_exprs if isinstance(ret_exprs, list) else list(ret_exprs)
 
     def __eq__(self, other):
         return (
             type(other) is Return
             and self.idx == other.idx
-            and self.target == other.target
             and self.ret_exprs == other.ret_exprs
         )
 
     def likes(self, other):
         return (
             type(other) is Return
-            and is_none_or_likeable(self.target, other.target)
             and is_none_or_likeable(self.ret_exprs, other.ret_exprs, is_list=True)
         )
 
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
-        return stable_hash((Return, self.idx, self.target, tuple(self.ret_exprs)))
+        return stable_hash((Return, self.idx, tuple(self.ret_exprs)))
 
     def __repr__(self):
-        return "Return to {!r} ({})".format(self.target, ",".join(repr(x) for x in self.ret_exprs))
+        return "Return to ({})".format(",".join(repr(x) for x in self.ret_exprs))
 
     def __str__(self):
         exprs = ",".join(str(ret_expr) for ret_expr in self.ret_exprs)
@@ -551,15 +544,6 @@ class Return(Statement):
     def replace(self, old_expr, new_expr):
         new_ret_exprs = []
         replaced = False
-
-        if self.target is not None:
-            r, new_target = self.target.replace(old_expr, new_expr)
-            if r:
-                replaced = True
-            else:
-                new_target = self.target
-        else:
-            new_target = None
 
         for expr in self.ret_exprs:
             if expr == old_expr:
@@ -576,7 +560,6 @@ class Return(Statement):
         if replaced:
             return True, Return(
                 self.idx,
-                new_target,
                 new_ret_exprs,
                 **self.tags,
             )
@@ -586,7 +569,6 @@ class Return(Statement):
     def copy(self):
         return Return(
             self.idx,
-            self.target,
             self.ret_exprs[::],
             **self.tags,
         )

@@ -477,7 +477,6 @@ class PCodeIRSBConverter(Converter):
         dest = Const(self._manager.next_atom(), None, self._irsb.next, self._manager.arch.bits)
         stmt = Return(
             self._statement_idx,
-            dest,
             [],
             ins_addr=self._manager.ins_addr,
             vex_block_addr=self._manager.block_addr,
