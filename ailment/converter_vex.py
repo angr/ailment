@@ -297,8 +297,8 @@ class VEXExprConverter(Converter):
 
         extra_kwargs = {}
         if op_name == "DivMod":
-            extra_kwargs["from_bits"] = op._from_size
-            extra_kwargs["to_bits"] = op._to_size
+            extra_kwargs["from_bits"] = op._from_size if op._from_size is not None else operands[1].bits
+            extra_kwargs["to_bits"] = op._to_size if op._to_size is not None else operands[1].bits
 
         return BinaryOp(
             manager.next_atom(),
