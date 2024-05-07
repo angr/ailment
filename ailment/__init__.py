@@ -15,7 +15,7 @@ from .block_walker import AILBlockWalker, AILBlockWalkerBase
 log = logging.getLogger(__name__)
 
 
-available_converters: Set[str] = set()
+available_converters: set[str] = set()
 
 try:
     from .converter_vex import VEXIRSBConverter
