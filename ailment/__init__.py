@@ -1,7 +1,6 @@
 __version__ = "9.2.102.dev0"
 
 import logging
-from typing import Set
 
 from .block import Block
 from . import statement as Stmt
