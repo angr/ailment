@@ -1,4 +1,6 @@
 # pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 try:
@@ -196,6 +198,77 @@ class Register(Atom):
 
     def copy(self) -> "Register":
         return Register(self.idx, self.variable, self.reg_offset, self.bits, **self.tags)
+
+
+class VirtualVariable(Atom):
+
+    __slots__ = (
+        "bits",
+        "varid",
+    )
+
+    def __init__(self, idx, varid, bits, variable=None, variable_offset=None, **kwargs):
+        super().__init__(idx, variable, variable_offset, **kwargs)
+
+        self.varid = varid
+        self.bits = bits
+
+    def size(self):
+        return self.bits // 8
+
+    def likes(self, atom):
+        return isinstance(atom, VirtualVariable) and self.varid == atom.varid and self.bits == atom.bits
+
+    def __repr__(self):
+        return f"<VVar {self.varid}@{self.bits}b>"
+
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
+        return stable_hash(("var", self.varid, self.bits))
+
+    def copy(self) -> VirtualVariable:
+        return VirtualVariable(
+            self.idx, self.varid, self.bits, variable=self.variable, variable_offset=self.variable_offset, **self.tags
+        )
+
+
+class Phi(Atom):
+
+    __slots__ = (
+        "bits",
+        "src_and_varids",
+    )
+
+    def __init__(
+        self,
+        idx,
+        bits,
+        src_and_varids: list[tuple[tuple[int, int], int]],
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
+        super().__init__(idx, variable, variable_offset=variable_offset, **kwargs)
+        self.bits = bits
+        self.src_and_varids = src_and_varids
+
+    def size(self):
+        return self.bits // 8
+
+    def likes(self, atom):
+        return isinstance(atom, Phi) and self.bits == atom.bits and self.src_and_varids == atom.src_and_varids
+
+    def __repr__(self):
+        return f"𝜙@{self.bits}b [{self.src_and_varids}]"
+
+    __hash__ = TaggedObject.__hash__
+
+    def _hash_core(self):
+        return stable_hash(("phi", self.bits, tuple(sorted(self.src_and_varids))))
+
+    def copy(self) -> Phi:
+        return Phi(self.idx, self.bits, self.src_and_varids, **self.tags)
 
 
 class Op(Expression):
