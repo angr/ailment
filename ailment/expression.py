@@ -1,5 +1,6 @@
 # pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
 from __future__ import annotations
+from enum import IntEnum
 
 from typing import TYPE_CHECKING
 
@@ -200,36 +201,83 @@ class Register(Atom):
         return Register(self.idx, self.variable, self.reg_offset, self.bits, **self.tags)
 
 
+class VirtualVariableCategory(IntEnum):
+    REGISTER = 0
+    MEMORY = 1
+    UNKNOWN = 2
+
+
 class VirtualVariable(Atom):
 
     __slots__ = (
         "bits",
         "varid",
+        "category",
+        "oident",
     )
 
-    def __init__(self, idx, varid, bits, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self,
+        idx,
+        varid: int,
+        bits,
+        category: VirtualVariableCategory,
+        oident: int | str | None = None,
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
         super().__init__(idx, variable, variable_offset, **kwargs)
 
         self.varid = varid
+        self.category = category
+        self.oident = oident
         self.bits = bits
 
+    @property
     def size(self):
         return self.bits // 8
 
+    @property
+    def was_reg(self) -> bool:
+        return self.category == VirtualVariableCategory.REGISTER
+
+    @property
+    def reg_offset(self) -> int | None:
+        if self.was_reg:
+            return self.oident
+        return None
+
     def likes(self, atom):
-        return isinstance(atom, VirtualVariable) and self.varid == atom.varid and self.bits == atom.bits
+        return (
+            isinstance(atom, VirtualVariable)
+            and self.varid == atom.varid
+            and self.bits == atom.bits
+            and self.category == atom.category
+            and self.oident == atom.oident
+        )
 
     def __repr__(self):
-        return f"<VVar {self.varid}@{self.bits}b>"
+        ori_str = ""
+        if self.category == VirtualVariableCategory.REGISTER:
+            ori_str = f"{{reg {self.oident}}}"
+        return f"vvar_{self.varid}{ori_str}"
 
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
-        return stable_hash(("var", self.varid, self.bits))
+        return stable_hash(("var", self.varid, self.bits, self.category, self.oident))
 
     def copy(self) -> VirtualVariable:
         return VirtualVariable(
-            self.idx, self.varid, self.bits, variable=self.variable, variable_offset=self.variable_offset, **self.tags
+            self.idx,
+            self.varid,
+            self.bits,
+            self.category,
+            oident=self.oident,
+            variable=self.variable,
+            variable_offset=self.variable_offset,
+            **self.tags,
         )
 
 
@@ -237,38 +285,43 @@ class Phi(Atom):
 
     __slots__ = (
         "bits",
-        "src_and_varids",
+        "src_and_vvars",
     )
 
     def __init__(
         self,
         idx,
         bits,
-        src_and_varids: list[tuple[tuple[int, int], int]],
+        src_and_vvars: list[tuple[tuple[int, int], VirtualVariable]],
         variable=None,
         variable_offset=None,
         **kwargs,
     ):
         super().__init__(idx, variable, variable_offset=variable_offset, **kwargs)
         self.bits = bits
-        self.src_and_varids = src_and_varids
+        self.src_and_vvars = src_and_vvars
 
-    def size(self):
+    @property
+    def size(self) -> int:
         return self.bits // 8
 
-    def likes(self, atom):
-        return isinstance(atom, Phi) and self.bits == atom.bits and self.src_and_varids == atom.src_and_varids
+    def likes(self, atom) -> bool:
+        if isinstance(atom, Phi) and self.bits == atom.bits:
+            self_src_and_vvarids = {(src, vvar.varid) for src, vvar in self.src_and_vvars}
+            other_src_and_vvarids = {(src, vvar.varid) for src, vvar in atom.src_and_vvars}
+            return self_src_and_vvarids == other_src_and_vvarids
+        return False
 
     def __repr__(self):
-        return f"𝜙@{self.bits}b [{self.src_and_varids}]"
+        return f"𝜙@{self.bits}b {self.src_and_vvars}"
 
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
-        return stable_hash(("phi", self.bits, tuple(sorted(self.src_and_varids))))
+        return stable_hash(("phi", self.bits, tuple(sorted(self.src_and_vvars))))
 
     def copy(self) -> Phi:
-        return Phi(self.idx, self.bits, self.src_and_varids, **self.tags)
+        return Phi(self.idx, self.bits, self.src_and_vvars[::], **self.tags)
 
 
 class Op(Expression):
