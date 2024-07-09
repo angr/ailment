@@ -203,8 +203,9 @@ class Register(Atom):
 
 class VirtualVariableCategory(IntEnum):
     REGISTER = 0
-    MEMORY = 1
-    UNKNOWN = 2
+    STACK = 1
+    MEMORY = 2
+    UNKNOWN = 3
 
 
 class VirtualVariable(Atom):
@@ -243,8 +244,18 @@ class VirtualVariable(Atom):
         return self.category == VirtualVariableCategory.REGISTER
 
     @property
+    def was_stack(self) -> bool:
+        return self.category == VirtualVariableCategory.STACK
+
+    @property
     def reg_offset(self) -> int | None:
         if self.was_reg:
+            return self.oident
+        return None
+
+    @property
+    def stack_offset(self) -> int | None:
+        if self.was_stack:
             return self.oident
         return None
 
@@ -259,8 +270,11 @@ class VirtualVariable(Atom):
 
     def __repr__(self):
         ori_str = ""
-        if self.category == VirtualVariableCategory.REGISTER:
-            ori_str = f"{{reg {self.oident}}}"
+        match self.category:
+            case VirtualVariableCategory.REGISTER:
+                ori_str = f"{{reg {self.reg_offset}}}"
+            case VirtualVariableCategory.STACK:
+                ori_str = f"{{stack {self.oident}}}"
         return f"vvar_{self.varid}{ori_str}"
 
     __hash__ = TaggedObject.__hash__
