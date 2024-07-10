@@ -319,10 +319,20 @@ class Phi(Atom):
     def size(self) -> int:
         return self.bits // 8
 
+    @property
+    def op(self) -> str:
+        return "Phi"
+
+    @property
+    def verbose_op(self) -> str:
+        return "Phi"
+
     def likes(self, atom) -> bool:
         if isinstance(atom, Phi) and self.bits == atom.bits:
-            self_src_and_vvarids = {(src, vvar.varid) for src, vvar in self.src_and_vvars}
-            other_src_and_vvarids = {(src, vvar.varid) for src, vvar in atom.src_and_vvars}
+            self_src_and_vvarids = {(src, vvar.varid if vvar is not None else None) for src, vvar in self.src_and_vvars}
+            other_src_and_vvarids = {
+                (src, vvar.varid if vvar is not None else None) for src, vvar in atom.src_and_vvars
+            }
             return self_src_and_vvarids == other_src_and_vvarids
         return False
 
