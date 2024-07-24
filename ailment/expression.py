@@ -68,7 +68,7 @@ class Atom(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx, variable, variable_offset=0, **kwargs):
+    def __init__(self, idx, variable=None, variable_offset=0, **kwargs):
         super().__init__(idx, 0, **kwargs)
         self.variable = variable
         self.variable_offset = variable_offset
@@ -224,11 +224,9 @@ class VirtualVariable(Atom):
         bits,
         category: VirtualVariableCategory,
         oident: int | str | None = None,
-        variable=None,
-        variable_offset=None,
         **kwargs,
     ):
-        super().__init__(idx, variable, variable_offset, **kwargs)
+        super().__init__(idx, **kwargs)
 
         self.varid = varid
         self.category = category
@@ -307,11 +305,9 @@ class Phi(Atom):
         idx,
         bits,
         src_and_vvars: list[tuple[tuple[int, int], VirtualVariable]],
-        variable=None,
-        variable_offset=None,
         **kwargs,
     ):
-        super().__init__(idx, variable, variable_offset=variable_offset, **kwargs)
+        super().__init__(idx, **kwargs)
         self.bits = bits
         self.src_and_vvars = src_and_vvars
 
