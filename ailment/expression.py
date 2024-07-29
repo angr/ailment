@@ -343,6 +343,20 @@ class Phi(Atom):
     def copy(self) -> Phi:
         return Phi(self.idx, self.bits, self.src_and_vvars[::], **self.tags)
 
+    def replace(self, old_expr, new_expr):
+        replaced = False
+        new_src_and_vvars = []
+        for src, vvar in self.src_and_vvars:
+            if vvar == old_expr and isinstance(new_expr, VirtualVariable):
+                replaced = True
+                new_src_and_vvars.append((src, new_expr))
+            else:
+                new_src_and_vvars.append((src, vvar))
+
+        if replaced:
+            return True, Phi(self.idx, self.bits, new_src_and_vvars, **self.tags)
+        return False, self
+
 
 class Op(Expression):
     __slots__ = ("op",)
