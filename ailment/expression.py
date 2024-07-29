@@ -341,7 +341,14 @@ class Phi(Atom):
         return stable_hash(("phi", self.bits, tuple(sorted(self.src_and_vvars))))
 
     def copy(self) -> Phi:
-        return Phi(self.idx, self.bits, self.src_and_vvars[::], **self.tags)
+        return Phi(
+            self.idx,
+            self.bits,
+            self.src_and_vvars[::],
+            variable=self.variable,
+            variable_offset=self.variable_offset,
+            **self.tags,
+        )
 
     def replace(self, old_expr, new_expr):
         replaced = False
@@ -354,7 +361,14 @@ class Phi(Atom):
                 new_src_and_vvars.append((src, vvar))
 
         if replaced:
-            return True, Phi(self.idx, self.bits, new_src_and_vvars, **self.tags)
+            return True, Phi(
+                self.idx,
+                self.bits,
+                new_src_and_vvars,
+                variable=self.variable,
+                variable_offset=self.variable_offset,
+                **self.tags,
+            )
         return False, self
 
 
