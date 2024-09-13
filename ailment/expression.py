@@ -269,9 +269,6 @@ class VirtualVariable(Atom):
             return self.oident
         return None
 
-    def __eq__(self, other):
-        return self.likes(other) and self.varid == other.varid
-
     def likes(self, atom):
         return (
             isinstance(atom, VirtualVariable)
