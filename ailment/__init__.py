@@ -5,7 +5,7 @@ import logging
 from .block import Block
 from . import statement as Stmt
 from . import expression as Expr
-from .statement import Assignment
+from .statement import Assignment, Statement
 from .expression import Expression, Const, Tmp, Register, UnaryOp, BinaryOp
 from .converter_common import Converter
 from .manager import Manager
@@ -24,6 +24,7 @@ try:
 except ImportError as e:
     log.debug("Could not import VEXIRSBConverter")
     log.debug(e)
+    VEXIRSBConverter = None
 
 try:
     from .converter_pcode import PCodeIRSBConverter
@@ -33,6 +34,7 @@ try:
 except ImportError as e:
     log.debug("Could not import PCodeIRSBConverter")
     log.debug(e)
+    PCodeIRSBConverter = None
 
 
 class IRSBConverter(Converter):
@@ -59,6 +61,7 @@ __all__ = [
     "Block",
     "Stmt",
     "Expr",
+    "Statement",
     "Assignment",
     "Expression",
     "Const",
@@ -70,6 +73,6 @@ __all__ = [
     "IRSBConverter",
     "AILBlockWalkerBase",
     "AILBlockWalker",
-    *(["PCodeIRSBConverter"] if "pcode" in available_converters else []),
-    *(["VEXIRSBConverter"] if "vex" in available_converters else []),
+    "PCodeIRSBConverter",
+    "VEXIRSBConverter",
 ]

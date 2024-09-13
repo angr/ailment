@@ -332,15 +332,7 @@ class VEXExprConverter(Converter):
                 bits=bits,
             )
 
-        return TernaryOp(
-            manager.next_atom(),
-            op_name,
-            operands,
-            ins_addr=manager.ins_addr,
-            vex_block_addr=manager.block_addr,
-            vex_stmt_idx=manager.vex_stmt_idx,
-            bits=bits,
-        )
+        raise TypeError("Please figure out what kind of operation this is (smart money says fused multiply) and convert it into multiple binops")
 
     @staticmethod
     def Const(expr, manager):
