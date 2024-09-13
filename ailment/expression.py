@@ -10,7 +10,7 @@ except ImportError:
     claripy = None
 
 from .tagged_object import TaggedObject
-from .utils import get_bits, stable_hash, is_none_or_likeable, is_none_or_matchable
+from .utils import get_bits, stable_hash, is_none_or_likeable
 
 if TYPE_CHECKING:
     from .statement import Statement
@@ -43,9 +43,6 @@ class Expression(TaggedObject):
 
     def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
         raise NotImplementedError()
-
-    def matches(self, atom):  # pylint:disable=unused-argument,no-self-use
-        return NotImplementedError()
 
     def replace(self, old_expr, new_expr):
         if self is old_expr:
@@ -118,7 +115,6 @@ class Const(Atom):
             and self.bits == other.bits
         )
 
-    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -157,7 +153,6 @@ class Tmp(Atom):
     def likes(self, other):
         return type(self) is type(other) and self.tmp_idx == other.tmp_idx and self.bits == other.bits
 
-    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -185,8 +180,6 @@ class Register(Atom):
 
     def likes(self, atom):
         return type(self) is type(atom) and self.reg_offset == atom.reg_offset and self.bits == atom.bits
-
-    matches = likes
 
     def __repr__(self):
         return str(self)
@@ -287,14 +280,6 @@ class VirtualVariable(Atom):
             and self.oident == atom.oident
         )
 
-    def matches(self, atom):
-        return (
-            isinstance(atom, VirtualVariable)
-            and self.bits == atom.bits
-            and self.category == atom.category
-            and self.oident == atom.oident
-        )
-
     def __repr__(self):
         ori_str = ""
         match self.category:
@@ -359,29 +344,6 @@ class Phi(Atom):
                 (src, vvar.varid if vvar is not None else None) for src, vvar in atom.src_and_vvars
             }
             return self_src_and_vvarids == other_src_and_vvarids
-        return False
-
-    def matches(self, atom) -> bool:
-        if isinstance(atom, Phi) and self.bits == atom.bits:
-            if len(self.src_and_vvars) != len(atom.src_and_vvars):
-                return False
-            self_src_and_vvars = dict(self.src_and_vvars)
-            other_src_and_vvars = dict(atom.src_and_vvars)
-            for src, self_vvar in self_src_and_vvars.items():
-                if src not in other_src_and_vvars:
-                    return False
-                other_vvar = other_src_and_vvars[src]
-                if self_vvar is None and other_vvar is None:
-                    continue
-                if (
-                    self_vvar is None
-                    and other_vvar is not None
-                    or self_vvar is not None
-                    and other_vvar is None
-                    or not self_vvar.matches(other_vvar)
-                ):
-                    return False
-            return True
         return False
 
     def __repr__(self):
@@ -454,11 +416,11 @@ class UnaryOp(Op):
         "variable_offset",
     )
 
-    def __init__(self, idx, op, operand, variable=None, variable_offset=None, bits: int | None = None, **kwargs):
+    def __init__(self, idx, op, operand, variable=None, variable_offset=None, **kwargs):
         super().__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
 
         self.operand = operand
-        self.bits = operand.bits if bits is None else bits
+        self.bits = operand.bits
         self.variable = variable
         self.variable_offset = variable_offset
 
@@ -470,18 +432,7 @@ class UnaryOp(Op):
 
     def likes(self, other):
         return (
-            type(other) is UnaryOp
-            and self.op == other.op
-            and self.bits == other.bits
-            and self.operand.likes(other.operand)
-        )
-
-    def matches(self, atom):
-        return (
-            type(atom) is UnaryOp
-            and self.op == atom.op
-            and self.bits == atom.bits
-            and self.operand.matches(atom.operand)
+            type(other) is UnaryOp and self.op == other.op and self.bits == other.bits and self.operand == other.operand
         )
 
     __hash__ = TaggedObject.__hash__
@@ -497,7 +448,7 @@ class UnaryOp(Op):
             r, replaced_operand = self.operand.replace(old_expr, new_expr)
 
         if r:
-            return True, UnaryOp(self.idx, self.op, replaced_operand, bits=self.bits, **self.tags)
+            return True, UnaryOp(self.idx, self.op, replaced_operand, **self.tags)
         else:
             return False, self
 
@@ -511,13 +462,7 @@ class UnaryOp(Op):
 
     def copy(self) -> UnaryOp:
         return UnaryOp(
-            self.idx,
-            self.op,
-            self.operand,
-            variable=self.variable,
-            variable_offset=self.variable_offset,
-            bits=self.bits,
-            **self.tags,
+            self.idx, self.op, self.operand, variable=self.variable, variable_offset=self.variable_offset, **self.tags
         )
 
     def has_atom(self, atom, identity=True):
@@ -576,19 +521,6 @@ class Convert(UnaryOp):
             and self.bits == other.bits
             and self.is_signed == other.is_signed
             and self.operand.likes(other.operand)
-            and self.from_type == other.from_type
-            and self.to_type == other.to_type
-            and self.rounding_mode == other.rounding_mode
-        )
-
-    def matches(self, other):
-        return (
-            type(other) is Convert
-            and self.from_bits == other.from_bits
-            and self.to_bits == other.to_bits
-            and self.bits == other.bits
-            and self.is_signed == other.is_signed
-            and self.operand.matches(other.operand)
             and self.from_type == other.from_type
             and self.to_type == other.to_type
             and self.rounding_mode == other.rounding_mode
@@ -689,17 +621,7 @@ class Reinterpret(UnaryOp):
             and self.from_type == other.from_type
             and self.to_bits == other.to_bits
             and self.to_type == other.to_type
-            and self.operand.likes(other.operand)
-        )
-
-    def matches(self, other):
-        return (
-            type(other) is Reinterpret
-            and self.from_bits == other.from_bits
-            and self.from_type == other.from_type
-            and self.to_bits == other.to_bits
-            and self.to_type == other.to_type
-            and self.operand.matches(other.operand)
+            and self.operand == other.operand
         )
 
     __hash__ = TaggedObject.__hash__
@@ -892,17 +814,6 @@ class BinaryOp(Op):
             and self.rounding_mode == other.rounding_mode
         )
 
-    def matches(self, other):
-        return (
-            type(other) is BinaryOp
-            and self.op == other.op
-            and self.bits == other.bits
-            and self.signed == other.signed
-            and is_none_or_matchable(self.operands, other.operands, is_list=True)
-            and self.floating_point == other.floating_point
-            and self.rounding_mode == other.rounding_mode
-        )
-
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -1002,117 +913,6 @@ class BinaryOp(Op):
         )
 
 
-class TernaryOp(Op):
-    OPSTR_MAP = {}
-
-    __slots__ = (
-        "operands",
-        "bits",
-    )
-
-    def __init__(self, idx, op, operands, bits=None, **kwargs):
-        depth = (
-            max(
-                operands[0].depth if isinstance(operands[0], Expression) else 0,
-                operands[1].depth if isinstance(operands[1], Expression) else 0,
-                operands[2].depth if isinstance(operands[1], Expression) else 0,
-            )
-            + 1
-        )
-        super().__init__(idx, depth, op, **kwargs)
-
-        assert len(operands) == 3
-        self.operands = operands
-        self.bits = bits
-
-    def __str__(self):
-        return f"{self.verbose_op}({self.operands[0]}, {self.operands[1]}, {self.operands[2]})"
-
-    def __repr__(self):
-        return f"{self.verbose_op}({self.operands[0]}, {self.operands[1]}, {self.operands[2]})"
-
-    def likes(self, other):
-        return (
-            type(other) is TernaryOp
-            and self.op == other.op
-            and self.bits == other.bits
-            and is_none_or_likeable(self.operands, other.operands, is_list=True)
-        )
-
-    def matches(self, other):
-        return (
-            type(other) is TernaryOp
-            and self.op == other.op
-            and self.bits == other.bits
-            and is_none_or_matchable(self.operands, other.operands, is_list=True)
-        )
-
-    __hash__ = TaggedObject.__hash__
-
-    def _hash_core(self):
-        return stable_hash((self.op, tuple(self.operands), self.bits))
-
-    def has_atom(self, atom, identity=True):
-        if super().has_atom(atom, identity=identity):
-            return True
-
-        for op in self.operands:
-            if identity and op == atom:
-                return True
-            if not identity and isinstance(op, Atom) and op.likes(atom):
-                return True
-            if isinstance(op, Atom) and op.has_atom(atom, identity=identity):
-                return True
-        return False
-
-    def replace(self, old_expr, new_expr):
-        if self.operands[0] == old_expr:
-            r0 = True
-            replaced_operand_0 = new_expr
-        elif isinstance(self.operands[0], Expression):
-            r0, replaced_operand_0 = self.operands[0].replace(old_expr, new_expr)
-        else:
-            r0, replaced_operand_0 = False, None
-
-        if self.operands[1] == old_expr:
-            r1 = True
-            replaced_operand_1 = new_expr
-        elif isinstance(self.operands[1], Expression):
-            r1, replaced_operand_1 = self.operands[1].replace(old_expr, new_expr)
-        else:
-            r1, replaced_operand_1 = False, None
-
-        if self.operands[2] == old_expr:
-            r2 = True
-            replaced_operand_2 = new_expr
-        elif isinstance(self.operands[2], Expression):
-            r2, replaced_operand_2 = self.operands[2].replace(old_expr, new_expr)
-        else:
-            r2, replaced_operand_2 = False, None
-
-        if r0 or r1 or r2:
-            return True, TernaryOp(
-                self.idx,
-                self.op,
-                [replaced_operand_0, replaced_operand_1, replaced_operand_2],
-                bits=self.bits,
-                **self.tags,
-            )
-        else:
-            return False, self
-
-    @property
-    def verbose_op(self):
-        return self.op
-
-    @property
-    def size(self):
-        return self.bits // 8
-
-    def copy(self) -> TernaryOp:
-        return TernaryOp(self.idx, self.op, self.operands[::], bits=self.bits, **self.tags)
-
-
 class Load(Expression):
     __slots__ = (
         "addr",
@@ -1169,27 +969,13 @@ class Load(Expression):
     def _likes_addr(self, other_addr):
         if hasattr(self.addr, "likes") and hasattr(other_addr, "likes"):
             return self.addr.likes(other_addr)
+
         return self.addr == other_addr
 
     def likes(self, other):
         return (
             type(other) is Load
             and self._likes_addr(other.addr)
-            and self.size == other.size
-            and self.endness == other.endness
-            and self.guard == other.guard
-            and self.alt == other.alt
-        )
-
-    def _matches_addr(self, other_addr):
-        if hasattr(self.addr, "matches") and hasattr(other_addr, "matches"):
-            return self.addr.matches(other_addr)
-        return self.addr == other_addr
-
-    def matches(self, other):
-        return (
-            type(other) is Load
-            and self._matches_addr(other.addr)
             and self.size == other.size
             and self.endness == other.endness
             and self.guard == other.guard
@@ -1252,18 +1038,9 @@ class ITE(Expression):
     def likes(self, atom):
         return (
             type(atom) is ITE
-            and self.cond.likes(atom.cond)
-            and self.iffalse.likes(atom.iffalse)
-            and self.iftrue.likes(atom.iftrue)
-            and self.bits == atom.bits
-        )
-
-    def matches(self, atom):
-        return (
-            type(atom) is ITE
-            and self.cond.matches(atom.cond)
-            and self.iffalse.matches(atom.iffalse)
-            and self.iftrue.matches(atom.iftrue)
+            and self.cond == atom.cond
+            and self.iffalse == atom.iffalse
+            and self.iftrue == atom.iftrue
             and self.bits == atom.bits
         )
 
@@ -1555,20 +1332,7 @@ class MultiStatementExpression(Expression):
         return stable_hash((MultiStatementExpression,) + tuple(self.stmts) + (self.expr,))
 
     def likes(self, other):
-        return (
-            type(self) is type(other)
-            and len(self.stmts) == len(other.stmts)
-            and all(s_stmt.likes(o_stmt) for s_stmt, o_stmt in zip(self.stmts, other.stmts))
-            and self.expr.likes(other.expr)
-        )
-
-    def matches(self, atom):
-        return (
-            type(self) is type(atom)
-            and len(self.stmts) == len(atom.stmts)
-            and all(s_stmt.matches(o_stmt) for s_stmt, o_stmt in zip(self.stmts, atom.stmts))
-            and self.expr.matches(atom.expr)
-        )
+        return type(self) is type(other) and self.stmts == other.stmts and self.expr == other.expr
 
     def __repr__(self):
         return f"MultiStatementExpression({self.stmts}, {self.expr})"
@@ -1661,7 +1425,6 @@ class BasePointerOffset(Expression):
             and self.offset == other.offset
         )
 
-    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):

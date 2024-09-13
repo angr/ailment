@@ -1,5 +1,6 @@
 # pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed
 from typing import Optional, TYPE_CHECKING
+from abc import ABC, abstractmethod
 
 try:
     import claripy
@@ -14,19 +15,22 @@ if TYPE_CHECKING:
     from angr.calling_conventions import SimCC
 
 
-class Statement(TaggedObject):
+class Statement(TaggedObject, ABC):
     """
     The base class of all AIL statements.
     """
 
     __slots__ = ()
 
+    @abstractmethod
     def __repr__(self):
         raise NotImplementedError()
 
+    @abstractmethod
     def __str__(self):
         raise NotImplementedError()
 
+    @abstractmethod
     def replace(self, old_expr, new_expr):
         raise NotImplementedError()
 
