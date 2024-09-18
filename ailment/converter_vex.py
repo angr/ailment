@@ -1,3 +1,4 @@
+# pylint:disable=missing-class-docstring
 import logging
 
 import pyvex
@@ -636,7 +637,7 @@ class VEXStmtConverter(Converter):
         dirty_expr = DirtyExpression(manager.next_atom(), stmt, bits=bits)
 
         return Assignment(
-            manager.next_atom(),
+            idx,
             tmp,
             dirty_expr,
             ins_addr=manager.ins_addr,
