@@ -627,6 +627,23 @@ class VEXStmtConverter(Converter):
 
         return stmts
 
+    @staticmethod
+    def Dirty(idx, stmt: pyvex.IRStmt.Dirty, manager):
+        # we translate it into tmp = DirtyExpression()
+
+        bits = manager.tyenv.sizeof(stmt.tmp)
+        tmp = VEXExprConverter.tmp(stmt.tmp, bits, manager)
+        dirty_expr = DirtyExpression(manager.next_atom(), stmt, bits=bits)
+
+        return Assignment(
+            manager.next_atom(),
+            tmp,
+            dirty_expr,
+            ins_addr=manager.ins_addr,
+            vex_block_addr=manager.block_addr,
+            vex_stmt_idx=manager.vex_stmt_idx,
+        )
+
 
 STATEMENT_MAPPINGS = {
     pyvex.IRStmt.Put: VEXStmtConverter.Put,
@@ -636,6 +653,7 @@ STATEMENT_MAPPINGS = {
     pyvex.IRStmt.StoreG: VEXStmtConverter.StoreG,
     pyvex.IRStmt.LoadG: VEXStmtConverter.LoadG,
     pyvex.IRStmt.CAS: VEXStmtConverter.CAS,
+    pyvex.IRStmt.Dirty: VEXStmtConverter.Dirty,
 }
 
 
