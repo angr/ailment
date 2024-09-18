@@ -630,7 +630,16 @@ class VEXStmtConverter(Converter):
 
     @staticmethod
     def Dirty(idx, stmt: pyvex.IRStmt.Dirty, manager):
-        # we translate it into tmp = DirtyExpression()
+        # we translate it into tmp = DirtyExpression() if possible
+
+        if stmt.tmp == 0xFFFFFFFF:
+            return DirtyStatement(
+                idx,
+                stmt,
+                ins_addr=manager.ins_addr,
+                vex_block_addr=manager.block_addr,
+                vex_stmt_idx=manager.vex_stmt_idx,
+            )
 
         bits = manager.tyenv.sizeof(stmt.tmp)
         tmp = VEXExprConverter.tmp(stmt.tmp, bits, manager)
