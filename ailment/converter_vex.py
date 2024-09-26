@@ -561,8 +561,20 @@ class VEXStmtConverter(Converter):
             dataLo = VEXExprConverter.convert(stmt.dataLo, manager)
             data = BinaryOp(manager.next_atom(), "Concat", (dataHi, dataLo), False)
 
-            expdHi = Convert(manager.next_atom(), widen_from_bits, widen_to_bits, False, VEXExprConverter.convert(stmt.dataHi, manager))
-            expdLo = Convert(manager.next_atom(), widen_from_bits, widen_to_bits, False, VEXExprConverter.convert(stmt.dataLo, manager))
+            expdHi = Convert(
+                manager.next_atom(),
+                widen_from_bits,
+                widen_to_bits,
+                False,
+                VEXExprConverter.convert(stmt.dataHi, manager),
+            )
+            expdLo = Convert(
+                manager.next_atom(),
+                widen_from_bits,
+                widen_to_bits,
+                False,
+                VEXExprConverter.convert(stmt.dataLo, manager),
+            )
             expd = BinaryOp(manager.next_atom(), "Concat", (expdHi, expdLo), False)
         else:
             narrow_to_bits = widen_to_bits = None
