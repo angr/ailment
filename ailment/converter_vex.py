@@ -20,7 +20,6 @@ from .expression import (
     ITE,
     Reinterpret,
     VEXCCallExpression,
-    TernaryOp,
 )
 from .converter_common import SkipConversionNotice, Converter
 
@@ -288,10 +287,30 @@ class VEXExprConverter(Converter):
 
         bits = op._output_size_bits
 
-        extra_kwargs = {}
         if op_name == "DivMod":
-            extra_kwargs["from_bits"] = op._from_size if op._from_size is not None else operands[1].bits
-            extra_kwargs["to_bits"] = op._to_size if op._to_size is not None else operands[1].bits
+            div = BinaryOp(
+                manager.next_atom(),
+                "Div",
+                operands,
+                signed,
+                ins_addr=manager.ins_addr,
+                vex_block_addr=manager.block_addr,
+                vex_stmt_idx=manager.vex_stmt_idx,
+                bits=bits,
+            )
+            mod = BinaryOp(
+                manager.next_atom(),
+                "Mod",
+                operands,
+                signed,
+                ins_addr=manager.ins_addr,
+                vex_block_addr=manager.block_addr,
+                vex_stmt_idx=manager.vex_stmt_idx,
+                bits=bits,
+            )
+            operands = [mod, div]
+            op_name = "Concat"
+            signed = False
 
         return BinaryOp(
             manager.next_atom(),
@@ -304,7 +323,6 @@ class VEXExprConverter(Converter):
             bits=bits,
             vector_count=vector_count,
             vector_size=vector_size,
-            **extra_kwargs,
         )
 
     @staticmethod
