@@ -1,5 +1,6 @@
 # pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed
-from typing import Optional, TYPE_CHECKING
+from __future__ import annotations
+from typing import TYPE_CHECKING, Sequence
 from abc import ABC, abstractmethod
 
 try:
@@ -463,11 +464,11 @@ class Call(Expression, Statement):
         self,
         idx,
         target,
-        calling_convention: Optional["SimCC"] = None,
+        calling_convention: SimCC | None = None,
         prototype=None,
-        args=None,
-        ret_expr=None,
-        fp_ret_expr=None,
+        args: Sequence[Expression] | None=None,
+        ret_expr: Expression | None = None,
+        fp_ret_expr: Expression | None = None,
         bits: int | None = None,
         **kwargs,
     ):
@@ -479,7 +480,14 @@ class Call(Expression, Statement):
         self.args = args
         self.ret_expr = ret_expr
         self.fp_ret_expr = fp_ret_expr
-        self.bits = bits if bits is not None else ret_expr.bits if ret_expr is not None else None
+        if bits is not None:
+            self.bits = bits
+        elif ret_expr is not None:
+            self.bits = ret_expr.bits
+        elif fp_ret_expr is not None:
+            self.bits = fp_ret_expr.bits
+        else:
+            self.bits = 0   # uhhhhhhhhhhhhhhhhhhh
 
     def likes(self, other):
         return (
@@ -719,6 +727,9 @@ class DirtyStatement(Statement):
 
     def copy(self) -> "DirtyStatement":
         return DirtyStatement(self.idx, self.dirty, **self.tags)
+    
+    def replace(self, old_expr, new_expr):
+        return self
 
 
 class Label(Statement):
@@ -740,6 +751,9 @@ class Label(Statement):
 
     def likes(self, other: "Label"):
         return isinstance(other, Label)
+
+    def replace(self, old_expr, new_expr):
+        return self
 
     matches = likes
 
