@@ -3,8 +3,8 @@ __version__ = "9.2.132.dev0"
 import logging
 
 from .block import Block
-from . import statement as Stmt
-from . import expression as Expr
+from . import statement
+from . import expression
 from .statement import Assignment, Statement
 from .expression import Expression, Const, Tmp, Register, UnaryOp, BinaryOp
 from .converter_common import Converter
@@ -13,6 +13,9 @@ from .block_walker import AILBlockWalker, AILBlockWalkerBase
 
 log = logging.getLogger(__name__)
 
+# REALLY BAD
+Expr = expression
+Stmt = statement
 
 available_converters: set[str] = set()
 
@@ -59,6 +62,8 @@ class IRSBConverter(Converter):
 __all__ = [
     "available_converters",
     "Block",
+    "expression",
+    "statement",
     "Stmt",
     "Expr",
     "Statement",

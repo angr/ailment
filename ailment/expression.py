@@ -1,8 +1,10 @@
 # pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
 from __future__ import annotations
-from enum import IntEnum
+from typing import TYPE_CHECKING, Sequence, cast
+from typing_extensions import Self
+from enum import Enum, IntEnum
+from abc import abstractmethod
 
-from typing import TYPE_CHECKING
 
 try:
     import claripy
@@ -10,7 +12,7 @@ except ImportError:
     claripy = None
 
 from .tagged_object import TaggedObject
-from .utils import get_bits, stable_hash, is_none_or_likeable
+from .utils import get_bits, stable_hash, is_none_or_likeable, is_none_or_matchable
 
 if TYPE_CHECKING:
     from .statement import Statement
@@ -21,12 +23,15 @@ class Expression(TaggedObject):
     The base class of all AIL expressions.
     """
 
+    bits: int
+
     __slots__ = ("depth",)
 
     def __init__(self, idx, depth, **kwargs):
         super().__init__(idx, **kwargs)
         self.depth = depth
 
+    @abstractmethod
     def __repr__(self):
         raise NotImplementedError()
 
@@ -41,13 +46,18 @@ class Expression(TaggedObject):
             return True
         return type(self) is type(other) and self.likes(other) and self.idx == other.idx
 
-    def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
+    @abstractmethod
+    def likes(self, other):  # pylint:disable=unused-argument,no-self-use
         raise NotImplementedError()
 
-    def replace(self, old_expr, new_expr):
+    @abstractmethod
+    def matches(self, other):  # pylint:disable=unused-argument,no-self-use
+        raise NotImplementedError()
+
+    def replace(self, old_expr: Expression, new_expr: Expression) -> tuple[bool, Self]:
         if self is old_expr:
             r = True
-            replaced = new_expr
+            replaced = cast(Self, new_expr)
         elif not isinstance(self, Atom):
             r, replaced = self.replace(old_expr, new_expr)
         else:
@@ -56,10 +66,10 @@ class Expression(TaggedObject):
         return r, replaced
 
     def __add__(self, other):
-        return BinaryOp(None, "Add", [self, other], False, **self.tags)
+        return BinaryOp(None, "Add", [self, other], signed=False, **self.tags)
 
     def __sub__(self, other):
-        return BinaryOp(None, "Sub", [self, other], False, **self.tags)
+        return BinaryOp(None, "Sub", [self, other], signed=False, **self.tags)
 
 
 class Atom(Expression):
@@ -68,16 +78,16 @@ class Atom(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx, variable=None, variable_offset=0, **kwargs):
+    def __init__(self, idx: int | None, variable=None, variable_offset=0, **kwargs):
         super().__init__(idx, 0, **kwargs)
         self.variable = variable
         self.variable_offset = variable_offset
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Atom (%d)" % self.idx
 
-    def copy(self):  # pylint:disable=no-self-use
-        return NotImplementedError()
+    def copy(self) -> Self:  # pylint:disable=no-self-use
+        raise NotImplementedError()
 
 
 class Const(Atom):
@@ -86,7 +96,7 @@ class Const(Atom):
         "bits",
     )
 
-    def __init__(self, idx, variable, value, bits, **kwargs):
+    def __init__(self, idx: int | None, variable, value: int | float, bits: int, **kwargs):
         super().__init__(idx, variable, **kwargs)
 
         self.value = value
@@ -115,6 +125,7 @@ class Const(Atom):
             and self.bits == other.bits
         )
 
+    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -134,7 +145,7 @@ class Tmp(Atom):
         "bits",
     )
 
-    def __init__(self, idx, variable, tmp_idx, bits, **kwargs):
+    def __init__(self, idx: int | None, variable, tmp_idx: int, bits, **kwargs):
         super().__init__(idx, variable, **kwargs)
 
         self.tmp_idx = tmp_idx
@@ -153,6 +164,7 @@ class Tmp(Atom):
     def likes(self, other):
         return type(self) is type(other) and self.tmp_idx == other.tmp_idx and self.bits == other.bits
 
+    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -168,7 +180,7 @@ class Register(Atom):
         "bits",
     )
 
-    def __init__(self, idx, variable, reg_offset, bits, **kwargs):
+    def __init__(self, idx: int | None, variable, reg_offset: int, bits: int, **kwargs):
         super().__init__(idx, variable, **kwargs)
 
         self.reg_offset = reg_offset
@@ -178,8 +190,8 @@ class Register(Atom):
     def size(self):
         return self.bits // 8
 
-    def likes(self, atom):
-        return type(self) is type(atom) and self.reg_offset == atom.reg_offset and self.bits == atom.bits
+    def likes(self, other):
+        return type(self) is type(other) and self.reg_offset == other.reg_offset and self.bits == other.bits
 
     def __repr__(self):
         return str(self)
@@ -192,6 +204,7 @@ class Register(Atom):
         else:
             return "%s" % str(self.variable.name)
 
+    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -256,28 +269,36 @@ class VirtualVariable(Atom):
         return self.category == VirtualVariableCategory.TMP
 
     @property
-    def reg_offset(self) -> int | None:
+    def reg_offset(self) -> int:
         if self.was_reg:
             return self.oident
-        return None
+        raise TypeError("Is not a register")
 
     @property
-    def stack_offset(self) -> int | None:
+    def stack_offset(self) -> int:
         if self.was_stack:
             return self.oident
-        return None
+        raise TypeError("Is not a stack variable")
 
     @property
     def tmp_idx(self) -> int | None:
         return self.oident if self.was_tmp else None
 
-    def likes(self, atom):
+    def likes(self, other):
         return (
-            isinstance(atom, VirtualVariable)
-            and self.varid == atom.varid
-            and self.bits == atom.bits
-            and self.category == atom.category
-            and self.oident == atom.oident
+            isinstance(other, VirtualVariable)
+            and self.varid == other.varid
+            and self.bits == other.bits
+            and self.category == other.category
+            and self.oident == other.oident
+        )
+
+    def matches(self, other):
+        return (
+            isinstance(other, VirtualVariable)
+            and self.bits == other.bits
+            and self.category == other.category
+            and self.oident == other.oident
         )
 
     def __repr__(self):
@@ -337,13 +358,36 @@ class Phi(Atom):
     def verbose_op(self) -> str:
         return "Phi"
 
-    def likes(self, atom) -> bool:
-        if isinstance(atom, Phi) and self.bits == atom.bits:
+    def likes(self, other) -> bool:
+        if isinstance(other, Phi) and self.bits == other.bits:
             self_src_and_vvarids = {(src, vvar.varid if vvar is not None else None) for src, vvar in self.src_and_vvars}
             other_src_and_vvarids = {
-                (src, vvar.varid if vvar is not None else None) for src, vvar in atom.src_and_vvars
+                (src, vvar.varid if vvar is not None else None) for src, vvar in other.src_and_vvars
             }
             return self_src_and_vvarids == other_src_and_vvarids
+        return False
+
+    def matches(self, other) -> bool:
+        if isinstance(other, Phi) and self.bits == other.bits:
+            if len(self.src_and_vvars) != len(other.src_and_vvars):
+                return False
+            self_src_and_vvars = dict(self.src_and_vvars)
+            other_src_and_vvars = dict(other.src_and_vvars)
+            for src, self_vvar in self_src_and_vvars.items():
+                if src not in other_src_and_vvars:
+                    return False
+                other_vvar = other_src_and_vvars[src]
+                if self_vvar is None and other_vvar is None:
+                    continue
+                if (
+                    self_vvar is None
+                    and other_vvar is not None
+                    or self_vvar is not None
+                    and other_vvar is None
+                    or not self_vvar.matches(other_vvar)
+                ):
+                    return False
+            return True
         return False
 
     def __repr__(self):
@@ -416,7 +460,9 @@ class UnaryOp(Op):
         "variable_offset",
     )
 
-    def __init__(self, idx, op, operand, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self, idx: int | None, op: str, operand: Expression, variable=None, variable_offset: int | None = None, **kwargs
+    ):
         super().__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
 
         self.operand = operand
@@ -432,7 +478,18 @@ class UnaryOp(Op):
 
     def likes(self, other):
         return (
-            type(other) is UnaryOp and self.op == other.op and self.bits == other.bits and self.operand == other.operand
+            type(other) is UnaryOp
+            and self.op == other.op
+            and self.bits == other.bits
+            and self.operand.likes(other.operand)
+        )
+
+    def matches(self, other):
+        return (
+            type(other) is UnaryOp
+            and self.op == other.op
+            and self.bits == other.bits
+            and self.operand.matches(other.operand)
         )
 
     __hash__ = TaggedObject.__hash__
@@ -471,9 +528,14 @@ class UnaryOp(Op):
         return self.operand.has_atom(atom, identity=identity)
 
 
-class Convert(UnaryOp):
+class ConvertType(Enum):
     TYPE_INT = 0
     TYPE_FP = 1
+
+
+class Convert(UnaryOp):
+    TYPE_INT = ConvertType.TYPE_INT
+    TYPE_FP = ConvertType.TYPE_FP
 
     __slots__ = (
         "from_bits",
@@ -486,13 +548,13 @@ class Convert(UnaryOp):
 
     def __init__(
         self,
-        idx,
-        from_bits,
-        to_bits,
-        is_signed,
-        operand,
-        from_type=TYPE_INT,
-        to_type=TYPE_INT,
+        idx: int | None,
+        from_bits: int,
+        to_bits: int,
+        is_signed: bool,
+        operand: Expression,
+        from_type: ConvertType = TYPE_INT,
+        to_type: ConvertType = TYPE_INT,
         rounding_mode=None,
         **kwargs,
     ):
@@ -521,6 +583,19 @@ class Convert(UnaryOp):
             and self.bits == other.bits
             and self.is_signed == other.is_signed
             and self.operand.likes(other.operand)
+            and self.from_type == other.from_type
+            and self.to_type == other.to_type
+            and self.rounding_mode == other.rounding_mode
+        )
+
+    def matches(self, other):
+        return (
+            type(other) is Convert
+            and self.from_bits == other.from_bits
+            and self.to_bits == other.to_bits
+            and self.bits == other.bits
+            and self.is_signed == other.is_signed
+            and self.operand.matches(other.operand)
             and self.from_type == other.from_type
             and self.to_type == other.to_type
             and self.rounding_mode == other.rounding_mode
@@ -621,7 +696,17 @@ class Reinterpret(UnaryOp):
             and self.from_type == other.from_type
             and self.to_bits == other.to_bits
             and self.to_type == other.to_type
-            and self.operand == other.operand
+            and self.operand.likes(other.operand)
+        )
+
+    def matches(self, other):
+        return (
+            type(other) is Reinterpret
+            and self.from_bits == other.from_bits
+            and self.from_type == other.from_type
+            and self.to_bits == other.to_bits
+            and self.to_type == other.to_type
+            and self.operand.matches(other.operand)
         )
 
     __hash__ = TaggedObject.__hash__
@@ -661,13 +746,11 @@ class BinaryOp(Op):
     __slots__ = (
         "operands",
         "bits",
-        "signed",
         "variable",
         "variable_offset",
         "floating_point",
         "rounding_mode",
-        "from_bits",  # for divmod
-        "to_bits",  # for divmod
+        "signed",
         "vector_count",
         "vector_size",
     )
@@ -683,7 +766,6 @@ class BinaryOp(Op):
         "MulV": "*",
         "Div": "/",
         "DivF": "/",
-        "DivMod": "/m",
         "Mod": "%",
         "Xor": "^",
         "And": "&",
@@ -700,10 +782,10 @@ class BinaryOp(Op):
         "CmpLE": "<=",
         "CmpGT": ">",
         "CmpGE": ">=",
-        "CmpLTs": "<s",
-        "CmpLEs": "<=s",
-        "CmpGTs": ">s",
-        "CmpGEs": ">=s",
+        "CmpLT (signed)": "<s",
+        "CmpLE (signed)": "<=s",
+        "CmpGT (signed)": ">s",
+        "CmpGE (signed)": ">=s",
         "Concat": "CONCAT",
         "Ror": "ROR",
         "Rol": "ROL",
@@ -719,25 +801,22 @@ class BinaryOp(Op):
         "CmpGE": "CmpLT",
         "CmpLE": "CmpGT",
         "CmpGT": "CmpLE",
-        "CmpLTs": "CmpGEs",
-        "CmpGEs": "CmpLTs",
-        "CmpLEs": "CmpGTs",
-        "CmpGTs": "CmpLEs",
     }
 
     def __init__(
         self,
-        idx,
-        op,
-        operands,
-        signed,
+        idx: int | None,
+        op: str,
+        operands: Sequence[Expression],
+        signed: bool = False,
+        *,
         variable=None,
         variable_offset=None,
         bits=None,
-        floating_point: bool = False,
-        rounding_mode: str | None = None,
-        from_bits: int | None = None,
-        to_bits: int | None = None,
+        floating_point=False,
+        rounding_mode=None,
+        from_bits=None,
+        to_bits=None,
         vector_count: int | None = None,
         vector_size: int | None = None,
         **kwargs,
@@ -749,11 +828,6 @@ class BinaryOp(Op):
             )
             + 1
         )
-
-        # special handling of initialization with signed op names
-        if op and op.endswith("s"):
-            op = op[:-1]
-            signed = True
 
         super().__init__(idx, depth, op, **kwargs)
 
@@ -790,9 +864,6 @@ class BinaryOp(Op):
         self.vector_count = vector_count
         self.vector_size = vector_size
 
-        self.from_bits = from_bits
-        self.to_bits = to_bits
-
         # TODO: sanity check of operands' sizes for some ops
         # assert self.bits == operands[1].bits
 
@@ -810,6 +881,17 @@ class BinaryOp(Op):
             and self.bits == other.bits
             and self.signed == other.signed
             and is_none_or_likeable(self.operands, other.operands, is_list=True)
+            and self.floating_point == other.floating_point
+            and self.rounding_mode == other.rounding_mode
+        )
+
+    def matches(self, other):
+        return (
+            type(other) is BinaryOp
+            and self.op == other.op
+            and self.bits == other.bits
+            and self.signed == other.signed
+            and is_none_or_matchable(self.operands, other.operands, is_list=True)
             and self.floating_point == other.floating_point
             and self.rounding_mode == other.rounding_mode
         )
@@ -843,14 +925,14 @@ class BinaryOp(Op):
 
         return False
 
-    def replace(self, old_expr, new_expr):
+    def replace(self, old_expr: Expression, new_expr: Expression) -> tuple[bool, BinaryOp]:
         if self.operands[0] == old_expr:
             r0 = True
             replaced_operand_0 = new_expr
         elif isinstance(self.operands[0], Expression):
             r0, replaced_operand_0 = self.operands[0].replace(old_expr, new_expr)
         else:
-            r0, replaced_operand_0 = False, None
+            r0, replaced_operand_0 = False, new_expr
 
         if self.operands[1] == old_expr:
             r1 = True
@@ -858,7 +940,7 @@ class BinaryOp(Op):
         elif isinstance(self.operands[1], Expression):
             r1, replaced_operand_1 = self.operands[1].replace(old_expr, new_expr)
         else:
-            r1, replaced_operand_1 = False, None
+            r1, replaced_operand_1 = False, new_expr
 
         r2, replaced_rm = False, None
         if self.rounding_mode is not None:
@@ -871,12 +953,10 @@ class BinaryOp(Op):
                 self.idx,
                 self.op,
                 [replaced_operand_0 if r0 else self.operands[0], replaced_operand_1 if r1 else self.operands[1]],
-                self.signed,
+                signed=self.signed,
                 bits=self.bits,
                 floating_point=self.floating_point,
                 rounding_mode=replaced_rm if r2 else self.rounding_mode,
-                from_bits=self.from_bits,
-                to_bits=self.to_bits,
                 **self.tags,
             )
         else:
@@ -886,10 +966,10 @@ class BinaryOp(Op):
     def verbose_op(self):
         op = self.op
         if self.floating_point:
-            op += "F"
+            op += " (float)"
         else:
             if self.signed:
-                op += "s"
+                op += " (signed)"
         return op
 
     @property
@@ -901,14 +981,12 @@ class BinaryOp(Op):
             self.idx,
             self.op,
             self.operands[::],
-            self.signed,
             variable=self.variable,
+            signed=self.signed,
             variable_offset=self.variable_offset,
             bits=self.bits,
             floating_point=self.floating_point,
             rounding_mode=self.rounding_mode,
-            from_bits=self.from_bits,
-            to_bits=self.to_bits,
             **self.tags,
         )
 
@@ -922,9 +1000,21 @@ class Load(Expression):
         "variable_offset",
         "guard",
         "alt",
+        "bits",
     )
 
-    def __init__(self, idx, addr, size, endness, variable=None, variable_offset=None, guard=None, alt=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        addr: Expression,
+        size: int,
+        endness: str,
+        variable=None,
+        variable_offset=None,
+        guard=None,
+        alt=None,
+        **kwargs,
+    ):
         depth = max(addr.depth, size.depth if isinstance(size, Expression) else 0) + 1
         super().__init__(idx, depth, **kwargs)
 
@@ -935,10 +1025,7 @@ class Load(Expression):
         self.alt = alt
         self.variable = variable
         self.variable_offset = variable_offset
-
-    @property
-    def bits(self):
-        return self.size * 8
+        self.bits = self.size * 8
 
     def __repr__(self):
         return str(self)
@@ -982,6 +1069,21 @@ class Load(Expression):
             and self.alt == other.alt
         )
 
+    def _matches_addr(self, other_addr):
+        if hasattr(self.addr, "matches") and hasattr(other_addr, "matches"):
+            return self.addr.matches(other_addr)
+        return self.addr == other_addr
+
+    def matches(self, other):
+        return (
+            type(other) is Load
+            and self._matches_addr(other.addr)
+            and self.size == other.size
+            and self.endness == other.endness
+            and self.guard == other.guard
+            and self.alt == other.alt
+        )
+
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -1011,7 +1113,16 @@ class ITE(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx, cond, iffalse, iftrue, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        cond: Expression,
+        iffalse: Expression,
+        iftrue: Expression,
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
         depth = (
             max(
                 cond.depth if isinstance(cond, Expression) else 0,
@@ -1035,13 +1146,22 @@ class ITE(Expression):
     def __str__(self):
         return f"(({self.cond}) ? ({self.iftrue}) : ({self.iffalse}))"
 
-    def likes(self, atom):
+    def likes(self, other):
         return (
-            type(atom) is ITE
-            and self.cond == atom.cond
-            and self.iffalse == atom.iffalse
-            and self.iftrue == atom.iftrue
-            and self.bits == atom.bits
+            type(other) is ITE
+            and self.cond.likes(other.cond)
+            and self.iffalse == other.iffalse
+            and self.iftrue == other.iftrue
+            and self.bits == other.bits
+        )
+
+    def matches(self, other):
+        return (
+            type(other) is ITE
+            and self.cond.matches(other.cond)
+            and self.iffalse == other.iffalse
+            and self.iftrue == other.iftrue
+            and self.bits == other.bits
         )
 
     __hash__ = TaggedObject.__hash__
@@ -1162,6 +1282,7 @@ class DirtyExpression(Expression):
             and self.bits == other.bits
         )
 
+    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -1229,6 +1350,8 @@ class DirtyExpression(Expression):
 
     @property
     def size(self):
+        if self.bits is None:
+            return None
         return self.bits // 8
 
 
@@ -1239,7 +1362,7 @@ class VEXCCallExpression(Expression):
         "bits",
     )
 
-    def __init__(self, idx, callee: str, operands: list[Expression], bits=None, **kwargs):
+    def __init__(self, idx: int | None, cee_name: str, operands: tuple[Expression, ...], bits: int, **kwargs):
         super().__init__(idx, max(operand.depth for operand in operands), **kwargs)
         self.callee = callee
         self.operands = operands
@@ -1308,6 +1431,8 @@ class VEXCCallExpression(Expression):
 
     @property
     def size(self):
+        if self.bits is None:
+            return None
         return self.bits // 8
 
 
@@ -1319,12 +1444,14 @@ class MultiStatementExpression(Expression):
     __slots__ = (
         "stmts",
         "expr",
+        "bits",
     )
 
     def __init__(self, idx: int | None, stmts: list[Statement], expr: Expression, **kwargs):
         super().__init__(idx, expr.depth + 1, **kwargs)
         self.stmts = stmts
         self.expr = expr
+        self.bits = self.expr.bits
 
     __hash__ = TaggedObject.__hash__
 
@@ -1332,7 +1459,20 @@ class MultiStatementExpression(Expression):
         return stable_hash((MultiStatementExpression,) + tuple(self.stmts) + (self.expr,))
 
     def likes(self, other):
-        return type(self) is type(other) and self.stmts == other.stmts and self.expr == other.expr
+        return (
+            type(self) is type(other)
+            and len(self.stmts) == len(other.stmts)
+            and all(s_stmt.likes(o_stmt) for s_stmt, o_stmt in zip(self.stmts, other.stmts))
+            and self.expr.likes(other.expr)
+        )
+
+    def matches(self, other):
+        return (
+            type(self) is type(other)
+            and len(self.stmts) == len(other.stmts)
+            and all(s_stmt.matches(o_stmt) for s_stmt, o_stmt in zip(self.stmts, other.stmts))
+            and self.expr.matches(other.expr)
+        )
 
     def __repr__(self):
         return f"MultiStatementExpression({self.stmts}, {self.expr})"
@@ -1342,10 +1482,6 @@ class MultiStatementExpression(Expression):
         expr_str = str(self.expr)
         concatenated_str = ", ".join(stmts_str + [expr_str])
         return f"({concatenated_str})"
-
-    @property
-    def bits(self):
-        return self.expr.bits
 
     @property
     def size(self):
@@ -1391,7 +1527,16 @@ class BasePointerOffset(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx, bits, base, offset, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        bits: int,
+        base: Expression | str,
+        offset: int,
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
         super().__init__(idx, (offset.depth if isinstance(offset, Expression) else 0) + 1, **kwargs)
         self.bits = bits
         self.base = base
@@ -1425,6 +1570,7 @@ class BasePointerOffset(Expression):
             and self.offset == other.offset
         )
 
+    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
@@ -1451,7 +1597,7 @@ class BasePointerOffset(Expression):
 class StackBaseOffset(BasePointerOffset):
     __slots__ = ()
 
-    def __init__(self, idx, bits, offset, **kwargs):
+    def __init__(self, idx: int | None, bits: int, offset: int, **kwargs):
         # stack base offset is always signed
         if offset >= (1 << (bits - 1)):
             offset -= 1 << bits
@@ -1470,7 +1616,7 @@ def negate(expr: Expression) -> Expression:
             expr.idx,
             BinaryOp.COMPARISON_NEGATION[expr.op],
             expr.operands,
-            expr.signed,
+            signed=expr.signed,
             bits=expr.bits,
             floating_point=expr.floating_point,
             rounding_mode=expr.rounding_mode,
