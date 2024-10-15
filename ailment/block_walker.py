@@ -542,6 +542,10 @@ class AILBlockWalker(AILBlockWalkerBase):
 
         src_and_vvars = None
         for idx, (src, vvar) in enumerate(expr.src_and_vvars):
+            if vvar is None:
+                if src_and_vvars is not None:
+                    src_and_vvars.append((src, None))
+                continue
             new_vvar = self._handle_expr(idx, vvar, stmt_idx, stmt, block)
             if new_vvar is not None and new_vvar is not vvar:
                 changed = True
