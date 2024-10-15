@@ -198,11 +198,17 @@ class AILBlockWalker(AILBlockWalkerBase):
 
     :ivar update_block: True if the block should be updated in place, False if a new block should be created and
                         returned as the result of walk().
+    :ivar replace_phi_stmt: True if you want _handle_Phi be called and vvars potentially replaced; False otherwise.
+                            Default to False because in the most majority cases you do not want vvars in a Phi
+                            variable be replaced.
     """
 
-    def __init__(self, stmt_handlers=None, expr_handlers=None, update_block: bool = True):
+    def __init__(
+        self, stmt_handlers=None, expr_handlers=None, update_block: bool = True, replace_phi_stmt: bool = False
+    ):
         super().__init__(stmt_handlers=stmt_handlers, expr_handlers=expr_handlers)
         self._update_block = update_block
+        self._replace_phi_stmt = replace_phi_stmt
 
     def walk(self, block: Block) -> Block | None:
         """
@@ -538,6 +544,10 @@ class AILBlockWalker(AILBlockWalkerBase):
         return None
 
     def _handle_Phi(self, expr_id: int, expr: Phi, stmt_idx: int, stmt: Statement, block: Block | None) -> Phi | None:
+        if not self._replace_phi_stmt:
+            # fallback to the read-only version
+            return super()._handle_Phi(expr_id, expr, stmt_idx, stmt, block)
+
         changed = False
 
         src_and_vvars = None
