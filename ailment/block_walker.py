@@ -537,6 +537,22 @@ class AILBlockWalker(AILBlockWalkerBase):
             return new_expr
         return None
 
+    def _handle_Phi(self, expr_id: int, expr: Phi, stmt_idx: int, stmt: Statement, block: Block | None) -> Phi | None:
+        changed = False
+
+        src_and_vvars = None
+        for idx, (src, vvar) in enumerate(expr.src_and_vvars):
+            new_vvar = self._handle_expr(idx, vvar, stmt_idx, stmt, block)
+            if new_vvar is not None and new_vvar is not vvar:
+                changed = True
+                if src_and_vvars is None:
+                    src_and_vvars = expr.src_and_vvars[:idx]
+                src_and_vvars.append((src, new_vvar))
+            elif src_and_vvars is not None:
+                src_and_vvars.append((src, vvar))
+
+        return Phi(expr.idx, expr.bits, src_and_vvars, **expr.tags) if changed else None
+
     def _handle_DirtyExpression(
         self, expr_idx: int, expr: DirtyExpression, stmt_idx: int, stmt: Statement, block: Block | None
     ):
