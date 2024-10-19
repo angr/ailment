@@ -59,8 +59,13 @@ class VEXExprConverter(Converter):
                 )
 
         log.warning("VEXExprConverter: Unsupported VEX expression of type %s.", type(expr))
+        try:
+            bits = expr.result_size(manager.tyenv)
+        except ValueError:
+            # e.g., "ValueError: Type Ity_INVALID does not have size"
+            bits = 0
         return DirtyExpression(
-            manager.next_atom(), f"unsupported_{str(type(expr))}", [], bits=expr.result_size(manager.tyenv)
+            manager.next_atom(), f"unsupported_{str(type(expr))}", [], bits=bits
         )
 
     @staticmethod
@@ -656,7 +661,14 @@ class VEXStmtConverter(Converter):
         bits = manager.tyenv.sizeof(stmt.tmp) if stmt.tmp != 0xFFFFFFFF else 0
         maddr = VEXExprConverter.convert(stmt.mAddr, manager) if stmt.mAddr is not None else None
         dirty_expr = DirtyExpression(
-            manager.next_atom(), stmt.cee, operands, guard=guard, mfx=stmt.mFx, maddr=maddr, msize=stmt.mSize, bits=bits
+            manager.next_atom(),
+            stmt.cee.name,
+            operands,
+            guard=guard,
+            mfx=stmt.mFx,
+            maddr=maddr,
+            msize=stmt.mSize,
+            bits=bits,
         )
 
         if stmt.tmp == 0xFFFFFFFF:
