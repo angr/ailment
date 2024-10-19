@@ -64,9 +64,7 @@ class VEXExprConverter(Converter):
         except ValueError:
             # e.g., "ValueError: Type Ity_INVALID does not have size"
             bits = 0
-        return DirtyExpression(
-            manager.next_atom(), f"unsupported_{str(type(expr))}", [], bits=bits
-        )
+        return DirtyExpression(manager.next_atom(), f"unsupported_{str(type(expr))}", [], bits=bits)
 
     @staticmethod
     def convert_list(exprs, manager):
