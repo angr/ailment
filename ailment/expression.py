@@ -1362,7 +1362,7 @@ class VEXCCallExpression(Expression):
         "bits",
     )
 
-    def __init__(self, idx: int | None, cee_name: str, operands: tuple[Expression, ...], bits: int, **kwargs):
+    def __init__(self, idx: int | None, callee: str, operands: tuple[Expression, ...], bits: int, **kwargs):
         super().__init__(idx, max(operand.depth for operand in operands), **kwargs)
         self.callee = callee
         self.operands = operands
