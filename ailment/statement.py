@@ -10,7 +10,7 @@ except ImportError:
 
 from .utils import stable_hash, is_none_or_likeable, is_none_or_matchable
 from .tagged_object import TaggedObject
-from .expression import Expression, DirtyExpression
+from .expression import Atom, Expression, DirtyExpression
 
 if TYPE_CHECKING:
     from angr.calling_conventions import SimCC
@@ -40,11 +40,13 @@ class Statement(TaggedObject, ABC):
             return expr0 is expr1
         return expr0 == expr1
 
-    def likes(self, atom):  # pylint:disable=unused-argument,no-self-use
+    @abstractmethod
+    def likes(self, other) -> bool:  # pylint:disable=unused-argument,no-self-use
         raise NotImplementedError()
 
-    def matches(self, atom):  # pylint:disable=unused-argument,no-self-use
-        return NotImplementedError()
+    @abstractmethod
+    def matches(self, other) -> bool:  # pylint:disable=unused-argument,no-self-use
+        raise NotImplementedError()
 
 
 class Assignment(Statement):
@@ -57,7 +59,7 @@ class Assignment(Statement):
         "src",
     )
 
-    def __init__(self, idx, dst, src, **kwargs):
+    def __init__(self, idx: int | None, dst: Atom, src: Expression, **kwargs):
         super().__init__(idx, **kwargs)
 
         self.dst = dst
@@ -120,7 +122,7 @@ class Store(Statement):
         "guard",
     )
 
-    def __init__(self, idx, addr, data, size, endness, guard=None, variable=None, offset=None, **kwargs):
+    def __init__(self, idx: int | None, addr: Expression, data: Expression, size: int, endness: str, guard: Expression | None = None, variable=None, offset=None, **kwargs):
         super().__init__(idx, **kwargs)
 
         self.addr = addr
@@ -704,7 +706,7 @@ class DirtyStatement(Statement):
 
     __slots__ = ("dirty",)
 
-    def __init__(self, idx, dirty: DirtyExpression, **kwargs):
+    def __init__(self, idx: int | None, dirty: DirtyExpression, **kwargs):
         super().__init__(idx, **kwargs)
         self.dirty = dirty
 
@@ -727,9 +729,12 @@ class DirtyStatement(Statement):
 
     def copy(self) -> "DirtyStatement":
         return DirtyStatement(self.idx, self.dirty, **self.tags)
-    
-    def replace(self, old_expr, new_expr):
-        return self
+
+    def likes(self, other):
+        return type(other) is DirtyStatement and self.dirty.likes(other.dirty)
+
+    def matches(self, other):
+        return type(other) is DirtyStatement and self.dirty.matches(other.dirty)
 
 
 class Label(Statement):
