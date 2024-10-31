@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Sequence
 from abc import ABC, abstractmethod
+from typing_extensions import Self
 
 try:
     import claripy
@@ -32,7 +33,7 @@ class Statement(TaggedObject, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def replace(self, old_expr, new_expr):
+    def replace(self, old_expr: Expression, new_expr: Expression) -> tuple[bool, Self]:
         raise NotImplementedError()
 
     def eq(self, expr0, expr1):  # pylint:disable=no-self-use
@@ -85,9 +86,10 @@ class Assignment(Statement):
     def __str__(self):
         return f"{str(self.dst)} = {str(self.src)}"
 
-    def replace(self, old_expr, new_expr):
+    def replace(self, old_expr: Expression, new_expr: Expression):
         if self.dst == old_expr:
             r_dst = True
+            assert isinstance(new_expr, Atom)
             replaced_dst = new_expr
         else:
             r_dst, replaced_dst = self.dst.replace(old_expr, new_expr)
@@ -558,7 +560,7 @@ class Call(Expression, Statement):
     def op(self):
         return "call"
 
-    def replace(self, old_expr, new_expr):
+    def replace(self, old_expr: Expression, new_expr: Expression):
         if isinstance(self.target, Expression):
             r0, replaced_target = self.target.replace(old_expr, new_expr)
         else:
@@ -721,6 +723,7 @@ class DirtyStatement(Statement):
 
     def replace(self, old_expr, new_expr):
         if self.dirty == old_expr:
+            assert isinstance(new_expr, DirtyExpression)
             return True, DirtyStatement(self.idx, new_expr, **self.tags)
         r, new_dirty = self.dirty.replace(old_expr, new_expr)
         if r:
@@ -758,7 +761,7 @@ class Label(Statement):
         return isinstance(other, Label)
 
     def replace(self, old_expr, new_expr):
-        return self
+        return False, self
 
     matches = likes
 
