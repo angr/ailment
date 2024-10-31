@@ -815,8 +815,6 @@ class BinaryOp(Op):
         bits=None,
         floating_point=False,
         rounding_mode=None,
-        from_bits=None,
-        to_bits=None,
         vector_count: int | None = None,
         vector_size: int | None = None,
         **kwargs,
