@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TypeAlias
 import struct
 
 try:
@@ -118,5 +118,6 @@ def is_none_or_matchable(arg1, arg2, is_list=False):
     if isinstance(arg1, Expression):
         return arg1.matches(arg2)
     return arg1 == arg2
+
 
 from .expression import Expression

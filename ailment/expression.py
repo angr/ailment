@@ -1,6 +1,7 @@
 # pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Sequence
 from typing_extensions import Self
 from enum import Enum, IntEnum
 from abc import abstractmethod
