@@ -1,6 +1,7 @@
 # pylint:disable=arguments-renamed,isinstance-second-argument-not-valid-type,missing-class-docstring
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Sequence
 from typing_extensions import Self
 from enum import Enum, IntEnum
 from abc import abstractmethod
@@ -460,7 +461,9 @@ class UnaryOp(Op):
         "variable_offset",
     )
 
-    def __init__(self, idx: int | None, op: str, operand: Expression, variable=None, variable_offset: int | None=None, **kwargs):
+    def __init__(
+        self, idx: int | None, op: str, operand: Expression, variable=None, variable_offset: int | None = None, **kwargs
+    ):
         super().__init__(idx, (operand.depth if isinstance(operand, Expression) else 0) + 1, op, **kwargs)
 
         self.operand = operand
@@ -476,12 +479,18 @@ class UnaryOp(Op):
 
     def likes(self, other):
         return (
-            type(other) is UnaryOp and self.op == other.op and self.bits == other.bits and self.operand.likes(other.operand)
+            type(other) is UnaryOp
+            and self.op == other.op
+            and self.bits == other.bits
+            and self.operand.likes(other.operand)
         )
 
     def matches(self, other):
         return (
-            type(other) is UnaryOp and self.op == other.op and self.bits == other.bits and self.operand.matches(other.operand)
+            type(other) is UnaryOp
+            and self.op == other.op
+            and self.bits == other.bits
+            and self.operand.matches(other.operand)
         )
 
     __hash__ = TaggedObject.__hash__
@@ -519,9 +528,11 @@ class UnaryOp(Op):
             return True
         return self.operand.has_atom(atom, identity=identity)
 
+
 class ConvertType(Enum):
     TYPE_INT = 0
     TYPE_FP = 1
+
 
 class Convert(UnaryOp):
     TYPE_INT = ConvertType.TYPE_INT
@@ -991,7 +1002,18 @@ class Load(Expression):
         "bits",
     )
 
-    def __init__(self, idx: int | None, addr: Expression, size: int, endness: str, variable=None, variable_offset=None, guard=None, alt=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        addr: Expression,
+        size: int,
+        endness: str,
+        variable=None,
+        variable_offset=None,
+        guard=None,
+        alt=None,
+        **kwargs,
+    ):
         depth = max(addr.depth, size.depth if isinstance(size, Expression) else 0) + 1
         super().__init__(idx, depth, **kwargs)
 
@@ -1090,7 +1112,16 @@ class ITE(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx: int | None, cond: Expression, iffalse: Expression, iftrue: Expression, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        cond: Expression,
+        iffalse: Expression,
+        iftrue: Expression,
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
         depth = (
             max(
                 cond.depth if isinstance(cond, Expression) else 0,
@@ -1486,7 +1517,16 @@ class BasePointerOffset(Expression):
         "variable_offset",
     )
 
-    def __init__(self, idx: int | None, bits: int, base: Expression | str, offset: int, variable=None, variable_offset=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        bits: int,
+        base: Expression | str,
+        offset: int,
+        variable=None,
+        variable_offset=None,
+        **kwargs,
+    ):
         super().__init__(idx, (offset.depth if isinstance(offset, Expression) else 0) + 1, **kwargs)
         self.bits = bits
         self.base = base

@@ -1,6 +1,7 @@
 # pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
+from collections.abc import Sequence
 from abc import ABC, abstractmethod
 from typing_extensions import Self
 
@@ -105,7 +106,7 @@ class Assignment(Statement):
         else:
             return False, self
 
-    def copy(self) -> "Assignment":
+    def copy(self) -> Assignment:
         return Assignment(self.idx, self.dst, self.src, **self.tags)
 
 
@@ -124,7 +125,18 @@ class Store(Statement):
         "guard",
     )
 
-    def __init__(self, idx: int | None, addr: Expression, data: Expression, size: int, endness: str, guard: Expression | None = None, variable=None, offset=None, **kwargs):
+    def __init__(
+        self,
+        idx: int | None,
+        addr: Expression,
+        data: Expression,
+        size: int,
+        endness: str,
+        guard: Expression | None = None,
+        variable=None,
+        offset=None,
+        **kwargs,
+    ):
         super().__init__(idx, **kwargs)
 
         self.addr = addr
@@ -228,7 +240,7 @@ class Store(Statement):
         else:
             return False, self
 
-    def copy(self) -> "Store":
+    def copy(self) -> Store:
         return Store(
             self.idx,
             self.addr,
@@ -433,7 +445,7 @@ class ConditionalJump(Statement):
         else:
             return False, self
 
-    def copy(self) -> "ConditionalJump":
+    def copy(self) -> ConditionalJump:
         return ConditionalJump(
             self.idx,
             self.condition,
@@ -470,7 +482,7 @@ class Call(Expression, Statement):
         target,
         calling_convention: SimCC | None = None,
         prototype=None,
-        args: Sequence[Expression] | None=None,
+        args: Sequence[Expression] | None = None,
         ret_expr: Expression | None = None,
         fp_ret_expr: Expression | None = None,
         bits: int | None = None,
@@ -491,7 +503,7 @@ class Call(Expression, Statement):
         elif fp_ret_expr is not None:
             self.bits = fp_ret_expr.bits
         else:
-            self.bits = 0   # uhhhhhhhhhhhhhhhhhhh
+            self.bits = 0  # uhhhhhhhhhhhhhhhhhhh
 
     def likes(self, other):
         return (
@@ -730,7 +742,7 @@ class DirtyStatement(Statement):
             return True, DirtyStatement(self.idx, new_dirty, **self.tags)
         return False, self
 
-    def copy(self) -> "DirtyStatement":
+    def copy(self) -> DirtyStatement:
         return DirtyStatement(self.idx, self.dirty, **self.tags)
 
     def likes(self, other):
@@ -757,7 +769,7 @@ class Label(Statement):
         self.ins_addr = ins_addr
         self.block_idx = block_idx
 
-    def likes(self, other: "Label"):
+    def likes(self, other: Label):
         return isinstance(other, Label)
 
     def replace(self, old_expr, new_expr):
@@ -781,5 +793,5 @@ class Label(Statement):
     def __str__(self):
         return f"{self.name}:"
 
-    def copy(self) -> "Label":
+    def copy(self) -> Label:
         return Label(self.idx, self.name, self.ins_addr, self.block_idx, **self.tags)

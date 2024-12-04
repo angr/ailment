@@ -350,7 +350,9 @@ class VEXExprConverter(Converter):
                 bits=bits,
             )
 
-        raise TypeError("Please figure out what kind of operation this is (smart money says fused multiply) and convert it into multiple binops")
+        raise TypeError(
+            "Please figure out what kind of operation this is (smart money says fused multiply) and convert it into multiple binops"
+        )
 
     @staticmethod
     def Const(expr, manager):
