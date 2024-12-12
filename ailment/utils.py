@@ -1,4 +1,4 @@
-# pylint:disable=ungrouped-imports
+# pylint:disable=ungrouped-imports,wrong-import-position
 from __future__ import annotations
 from typing import TypeAlias
 import struct
@@ -117,4 +117,4 @@ def is_none_or_matchable(arg1, arg2, is_list=False):
     return arg1 == arg2
 
 
-from .expression import Expression  # pylint:disable=wrong-import-position
+from .expression import Expression  # noqa: E402

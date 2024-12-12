@@ -1279,7 +1279,6 @@ class DirtyExpression(Expression):
             and self.bits == other.bits
         )
 
-    matches = likes
     __hash__ = TaggedObject.__hash__
 
     def _hash_core(self):
