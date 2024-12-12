@@ -2,9 +2,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 from collections.abc import Sequence
-from typing_extensions import Self
 from enum import Enum, IntEnum
 from abc import abstractmethod
+from typing_extensions import Self
 
 
 try:
@@ -26,7 +26,10 @@ class Expression(TaggedObject):
 
     bits: int
 
-    __slots__ = ("depth",)
+    __slots__ = (
+        "bits",
+        "depth",
+    )
 
     def __init__(self, idx, depth, **kwargs):
         super().__init__(idx, **kwargs)
@@ -92,10 +95,7 @@ class Atom(Expression):
 
 
 class Const(Atom):
-    __slots__ = (
-        "value",
-        "bits",
-    )
+    __slots__ = ("value",)
 
     def __init__(self, idx: int | None, variable, value: int | float, bits: int, **kwargs):
         super().__init__(idx, variable, **kwargs)
@@ -141,10 +141,7 @@ class Const(Atom):
 
 
 class Tmp(Atom):
-    __slots__ = (
-        "tmp_idx",
-        "bits",
-    )
+    __slots__ = ("tmp_idx",)
 
     def __init__(self, idx: int | None, variable, tmp_idx: int, bits, **kwargs):
         super().__init__(idx, variable, **kwargs)
@@ -176,10 +173,7 @@ class Tmp(Atom):
 
 
 class Register(Atom):
-    __slots__ = (
-        "reg_offset",
-        "bits",
-    )
+    __slots__ = ("reg_offset",)
 
     def __init__(self, idx: int | None, variable, reg_offset: int, bits: int, **kwargs):
         super().__init__(idx, variable, **kwargs)
@@ -227,7 +221,6 @@ class VirtualVariableCategory(IntEnum):
 class VirtualVariable(Atom):
 
     __slots__ = (
-        "bits",
         "varid",
         "category",
         "oident",
@@ -331,10 +324,7 @@ class VirtualVariable(Atom):
 
 class Phi(Atom):
 
-    __slots__ = (
-        "bits",
-        "src_and_vvars",
-    )
+    __slots__ = ("src_and_vvars",)
 
     def __init__(
         self,
@@ -456,7 +446,6 @@ class Op(Expression):
 class UnaryOp(Op):
     __slots__ = (
         "operand",
-        "bits",
         "variable",
         "variable_offset",
     )
@@ -759,7 +748,6 @@ class Reinterpret(UnaryOp):
 class BinaryOp(Op):
     __slots__ = (
         "operands",
-        "bits",
         "variable",
         "variable_offset",
         "floating_point",
@@ -1012,7 +1000,6 @@ class Load(Expression):
         "variable_offset",
         "guard",
         "alt",
-        "bits",
     )
 
     def __init__(
@@ -1120,7 +1107,6 @@ class ITE(Expression):
         "cond",
         "iffalse",
         "iftrue",
-        "bits",
         "variable",
         "variable_offset",
     )
@@ -1233,7 +1219,6 @@ class DirtyExpression(Expression):
         "mfx",
         "maddr",
         "msize",
-        "bits",
     )
 
     def __init__(
@@ -1371,7 +1356,6 @@ class VEXCCallExpression(Expression):
     __slots__ = (
         "callee",
         "operands",
-        "bits",
     )
 
     def __init__(self, idx: int | None, callee: str, operands: tuple[Expression, ...], bits: int, **kwargs):
@@ -1456,7 +1440,6 @@ class MultiStatementExpression(Expression):
     __slots__ = (
         "stmts",
         "expr",
-        "bits",
     )
 
     def __init__(self, idx: int | None, stmts: list[Statement], expr: Expression, **kwargs):
@@ -1532,7 +1515,6 @@ class MultiStatementExpression(Expression):
 
 class BasePointerOffset(Expression):
     __slots__ = (
-        "bits",
         "base",
         "offset",
         "variable",

@@ -473,7 +473,6 @@ class Call(Expression, Statement):
         "args",
         "ret_expr",
         "fp_ret_expr",
-        "bits",
     )
 
     def __init__(

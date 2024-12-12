@@ -297,7 +297,7 @@ class VEXExprConverter(Converter):
                     manager.next_atom(),
                     op2_size,
                     op1_size,
-                    False if op._from_signed == "U" else True,
+                    op._from_signed != "U",
                     operands[1],
                     ins_addr=manager.ins_addr,
                     vex_block_addr=manager.block_addr,
@@ -389,7 +389,8 @@ class VEXExprConverter(Converter):
             )
 
         raise TypeError(
-            "Please figure out what kind of operation this is (smart money says fused multiply) and convert it into multiple binops"
+            "Please figure out what kind of operation this is (smart money says fused multiply) and convert it into "
+            "multiple binops"
         )
 
     @staticmethod

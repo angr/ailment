@@ -1,3 +1,4 @@
+# pylint:disable=ungrouped-imports
 from __future__ import annotations
 from typing import TypeAlias
 import struct
@@ -86,8 +87,6 @@ def is_none_or_likeable(arg1, arg2, is_list=False):
     """
     Returns whether two things are both None or can like each other
     """
-    from .expression import Expression  # pylint:disable=import-outside-toplevel
-
     if arg1 is None or arg2 is None:
         if arg1 == arg2:
             return True
@@ -105,8 +104,6 @@ def is_none_or_matchable(arg1, arg2, is_list=False):
     """
     Returns whether two things are both None or can match each other
     """
-    from .expression import Expression  # pylint:disable=import-outside-toplevel
-
     if arg1 is None or arg2 is None:
         if arg1 == arg2:
             return True
@@ -120,4 +117,4 @@ def is_none_or_matchable(arg1, arg2, is_list=False):
     return arg1 == arg2
 
 
-from .expression import Expression
+from .expression import Expression  # pylint:disable=wrong-import-position
