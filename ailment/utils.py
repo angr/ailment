@@ -6,7 +6,7 @@ import struct
 try:
     from claripy.ast import Bits
 except ImportError:
-    from typing import Never as Bits
+    from typing_extensions import Never as Bits
 
 try:
     import _md5 as md5lib
