@@ -16,6 +16,7 @@ from .expression import (
     Tmp,
     Register,
     Const,
+    Reinterpret,
     MultiStatementExpression,
     VirtualVariable,
     Phi,
@@ -49,6 +50,7 @@ class AILBlockWalkerBase:
             VEXCCallExpression: self._handle_VEXCCallExpression,
             Tmp: self._handle_Tmp,
             Register: self._handle_Register,
+            Reinterpret: self._handle_Reinterpret,
             Const: self._handle_Const,
             MultiStatementExpression: self._handle_MultiStatementExpression,
             VirtualVariable: self._handle_VirtualVariable,
@@ -152,6 +154,11 @@ class AILBlockWalkerBase:
         self._handle_expr(0, expr.operand, stmt_idx, stmt, block)
 
     def _handle_Convert(self, expr_idx: int, expr: Convert, stmt_idx: int, stmt: Statement, block: Block | None):
+        self._handle_expr(expr_idx, expr.operand, stmt_idx, stmt, block)
+
+    def _handle_Reinterpret(
+        self, expr_idx: int, expr: Reinterpret, stmt_idx: int, stmt: Statement, block: Block | None
+    ):
         self._handle_expr(expr_idx, expr.operand, stmt_idx, stmt, block)
 
     def _handle_ITE(self, expr_idx: int, expr: ITE, stmt_idx: int, stmt: Statement, block: Block | None):
@@ -555,6 +562,16 @@ class AILBlockWalker(AILBlockWalkerBase):
         new_operand = self._handle_expr(expr_idx, expr.operand, stmt_idx, stmt, block)
         if new_operand is not None and new_operand is not expr.operand:
             return Convert(expr.idx, expr.from_bits, expr.to_bits, expr.is_signed, new_operand, **expr.tags)
+        return None
+
+    def _handle_Reinterpret(
+        self, expr_idx: int, expr: Reinterpret, stmt_idx: int, stmt: Statement, block: Block | None
+    ):
+        new_operand = self._handle_expr(expr_idx, expr.operand, stmt_idx, stmt, block)
+        if new_operand is not None and new_operand is not expr.operand:
+            return Reinterpret(
+                expr.idx, expr.from_bits, expr.from_type, expr.to_bits, expr.to_type, new_operand, **expr.tags
+            )
         return None
 
     def _handle_ITE(self, expr_idx: int, expr: ITE, stmt_idx: int, stmt: Statement, block: Block | None):
