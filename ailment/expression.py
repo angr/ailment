@@ -282,6 +282,25 @@ class VirtualVariable(Atom):
     def tmp_idx(self) -> int | None:
         return self.oident if self.was_tmp else None
 
+    @property
+    def parameter_category(self) -> VirtualVariableCategory | None:
+        if self.was_parameter:
+            assert isinstance(self.oident, tuple)
+            return self.oident[0]
+        return None
+
+    @property
+    def parameter_reg_offset(self) -> int | None:
+        if self.was_parameter and self.parameter_category == VirtualVariableCategory.REGISTER:
+            return self.oident[1]
+        return None
+
+    @property
+    def parameter_stack_offset(self) -> int | None:
+        if self.was_parameter and self.parameter_category == VirtualVariableCategory.STACK:
+            return self.oident[1]
+        return None
+
     def likes(self, other):
         return (
             isinstance(other, VirtualVariable)
