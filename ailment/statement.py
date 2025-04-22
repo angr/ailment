@@ -1,4 +1,4 @@
-# pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed
+# pylint:disable=isinstance-second-argument-not-valid-type,no-self-use,arguments-renamed,too-many-boolean-expressions
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from collections.abc import Sequence
@@ -588,7 +588,7 @@ class Call(Expression, Statement):
             and is_none_or_matchable(self.fp_ret_expr, other.fp_ret_expr)
         )
 
-    __hash__ = TaggedObject.__hash__
+    __hash__ = TaggedObject.__hash__  # type: ignore
 
     def _hash_core(self):
         return stable_hash((Call, self.idx, self.target))
@@ -828,6 +828,8 @@ class CAS(Statement):
             )
         )
 
+    __hash__ = TaggedObject.__hash__
+
     def __repr__(self):
         if self.old_hi is None:
             return f"CAS({self.addr}, {self.data_lo}, {self.expd_lo}, {self.old_lo})"
@@ -844,7 +846,7 @@ class CAS(Statement):
             f"{self.expd_hi} .. {self.expd_lo})"
         )
 
-    def replace(self, old_expr: Expression, new_expr: Expression) -> tuple[bool, Self]:
+    def replace(self, old_expr: Expression, new_expr: Expression) -> tuple[bool, CAS]:
         r_addr, replaced_addr = self.addr.replace(old_expr, new_expr)
         r_data_lo, replaced_data_lo = self.data_lo.replace(old_expr, new_expr)
         r_data_hi, replaced_data_hi = self.data_hi.replace(old_expr, new_expr) if self.data_hi else (False, None)
@@ -866,8 +868,7 @@ class CAS(Statement):
                 endness=self.endness,
                 **self.tags,
             )
-        else:
-            return False, self
+        return False, self
 
     def copy(self) -> CAS:
         return CAS(
