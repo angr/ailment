@@ -2,6 +2,54 @@
 requires = ["setuptools>=46.4.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "ailment"
+description = "The angr intermediate language."
+license = { text = "BSD-2-Clause" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "typing-extensions",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://api.angr.io/projects/ailment/en/latest/"
+Repository = "https://github.com/angr/ailment"
+
+[project.optional-dependencies]
+docs = [
+    "furo",
+    "myst-parser",
+    "sphinx",
+    "sphinx-autodoc-typehints",
+]
+testing = [
+    "pytest",
+    "pytest-xdist",
+]
+
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ailment.__version__" }
+
+[tool.setuptools.package-data]
+ailment = ["py.typed"]
+
 [tool.black]
 line-length = 120
 target-version = ['py310']
