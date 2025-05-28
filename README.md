@@ -1,3 +1,7 @@
+**Archival:** ailment has been [merged](https://github.com/angr/angr/pull/5501) into angr.
+
+---
+
 # AILment
 [![Latest Release](https://img.shields.io/pypi/v/ailment.svg)](https://pypi.python.org/pypi/ailment/)
 [![Python Version](https://img.shields.io/pypi/pyversions/ailment)](https://pypi.python.org/pypi/ailment/)
